@@ -61,11 +61,9 @@ dependencies {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
-tasks.register("installGitHooks") {
+tasks.register<Exec>("installGitHooks") {
+    commandLine("git", "config", "core.hooksPath", ".githooks")
     doLast {
-        exec {
-            commandLine("git", "config", "core.hooksPath", ".githooks")
-        }
         println("✅ Git hooks 설정 완료!")
     }
 }
