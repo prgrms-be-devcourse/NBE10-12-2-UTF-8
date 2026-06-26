@@ -1,0 +1,11 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+COMMIT_MSG=$(cat "$1")
+VALID_TYPES="^(feat|fix|refactor|docs|chore): .+"
+
+if ! echo "$COMMIT_MSG" | grep -qE "$VALID_TYPES"; then
+  echo "❌ 커밋 메시지 형식이 올바르지 않습니다."
+  echo "✅ 올바른 형식: feat: 메시지 | fix: 메시지 | refactor: 메시지 | docs: 메시지 | chore: 메시지"
+  exit 1
+fi

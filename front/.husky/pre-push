@@ -1,0 +1,11 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+BRANCH=$(git symbolic-ref HEAD | sed 's|refs/heads/||')
+VALID_BRANCH="^(main|develop|(feat|fix|refactor|docs|chore)/(back|front)/[0-9]+)$"
+
+if ! echo "$BRANCH" | grep -qE "$VALID_BRANCH"; then
+  echo "❌ 브랜치명이 올바르지 않습니다."
+  echo "✅ 올바른 형식: feat/back/123 | fix/front/123 | refactor/back/123 | docs/front/123 | chore/back/123"
+  exit 1
+fi
