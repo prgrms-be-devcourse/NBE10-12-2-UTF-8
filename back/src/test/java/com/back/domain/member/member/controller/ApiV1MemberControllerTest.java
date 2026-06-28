@@ -51,7 +51,7 @@ public class ApiV1MemberControllerTest {
         resultActions
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.resultCode").value("201-1"))
-                .andExpect(jsonPath("$.message").value("회원 생성 성공"))
+                .andExpect(jsonPath("$.msg").value("회원 생성 성공"))
                 .andExpect(jsonPath("$.data.id").exists())
                 .andExpect(jsonPath("$.data.email").value("test@test.com"))
                 .andExpect(jsonPath("$.data.industry").value("IT"));
@@ -91,7 +91,7 @@ public class ApiV1MemberControllerTest {
         resultActions
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
-                .andExpect(jsonPath("$.message").value("로그인 생성 성공"))
+                .andExpect(jsonPath("$.msg").value("로그인 생성 성공"))
                 .andExpect(jsonPath("$.data.grantType").value("Bearer"))
                 .andExpect(jsonPath("$.data.accessToken").exists())
                 .andExpect(jsonPath("$.data.refreshToken").exists())

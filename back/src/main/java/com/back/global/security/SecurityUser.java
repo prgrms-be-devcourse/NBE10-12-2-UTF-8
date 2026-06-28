@@ -9,16 +9,13 @@ import java.util.Collection;
 @Getter
 public class SecurityUser extends User {
     private final int id;
-    private final String name;
 
     public SecurityUser(
             int id,
-            String username,
-            String name,
+            String email,
             Collection<? extends GrantedAuthority> authorities
     ) {
-        super(username, "", authorities); // 우리의 시나리오(REST API)에서는 이 객체의 비밀번호 필드를 활용할 일이 없다.
+        super(email, "", authorities);
         this.id = id;
-        this.name = name;
     }
 }

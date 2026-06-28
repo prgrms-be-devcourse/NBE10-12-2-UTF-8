@@ -11,64 +11,45 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Getter
 @NoArgsConstructor
 public class Member extends BaseEntity {
     @Column(unique = true)
-    private String username;
+    private String email;
     private String password;
-    private String nickname;
-    @Column(unique = true)
-    private String apiKey;
+    private String industry;
+    private String role; // "USER", "ADMIN"
+    private boolean isSuspended;
+    private String refreshToken;
 
-    public Member(int id, String username, String name) {
+    // 인증/인가 시 사용하는 결합용 생성자
+    public Member(int id, String email, String role) {
         setId(id);
-        this.username = username;
-        setName(name);
+        this.email = email;
+        this.role = role;
     }
 
-    public Member(String username, String password, String nickname) {
-        this.username = username;
+    public Member(String email, String password, String industry, String role) {
+        this.email = email;
         this.password = password;
-        this.nickname = nickname;
-        this.apiKey = UUID.randomUUID().toString();
+        this.industry = industry;
+        this.role = role;
+        this.isSuspended = false;
     }
 
-    public String getName() {
-        return nickname;
-    }
-
-    public void setName(String name) {
-        this.nickname = name;
-    }
-
-    public void modifyApiKey(String apiKey) {
-        this.apiKey = apiKey;
+    public void updateRefreshToken(String refreshToken) {
+        this.refreshToken = refreshToken;
     }
 
     public boolean isAdmin() {
-        if ("system".equals(username)) return true;
-        if ("admin".equals(username)) return true;
-
-        return false;
+        return "ADMIN".equals(role);
     }
 
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return getAuthoritiesAsStringList()
-                .stream()
-                .map(SimpleGrantedAuthority::new)
-                .toList();
-    }
-
-    private List<String> getAuthoritiesAsStringList() {
-        List<String> authorities = new ArrayList<>();
-
-        if (isAdmin())
-            authorities.add("ROLE_ADMIN");
-
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + this.role));
         return authorities;
     }
 }

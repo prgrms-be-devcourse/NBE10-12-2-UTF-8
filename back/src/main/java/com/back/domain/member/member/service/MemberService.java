@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -18,43 +19,45 @@ public class MemberService {
     private final PasswordEncoder passwordEncoder;
     private final MemberRepository memberRepository;
 
-
     public long count() {
         return memberRepository.count();
     }
 
-    public Member join(String username, String password, String nickname) {
-        findByUsername(username).ifPresent(_ -> {
-            throw new ServiceException("409-1","이미 존재하는 아이디입니다.");
+    public Member join(String email, String password, String industry, String role) {
+        findByEmail(email).ifPresent(_ -> {
+            throw new ServiceException("409-1", "이미 존재하는 이메일입니다.");
         });
 
-        password = passwordEncoder.encode(password);
-
-        Member member = new Member(username, password, nickname);
+        String encodedPassword = passwordEncoder.encode(password);
+        Member member = new Member(email, encodedPassword, industry, role);
 
         return memberRepository.save(member);
     }
+
     public void checkPassword(Member member, String password) {
         if (!passwordEncoder.matches(password, member.getPassword()))
             throw new ServiceException("401-1", "비밀번호가 일치하지 않습니다.");
     }
-    public Optional<Member> findByUsername(String username) {
-        return memberRepository.findByUsername(username);
+
+    public Optional<Member> findByEmail(String email) {
+        return memberRepository.findByEmail(email);
     }
-    public Optional<Member> findByApiKey(String apiKey) {
-        return memberRepository.findByApiKey(apiKey);
-    }
+
     public String genAccessToken(Member member) {
         return authTokenService.genAccessToken(member);
     }
+
+    public String genRefreshToken(Member member) {
+        String token = UUID.randomUUID().toString();
+        member.updateRefreshToken(token);
+        return token;
+    }
+
     public Map<String, Object> payload(String accessToken) {
         return authTokenService.payload(accessToken);
     }
 
     public Optional<Member> findById(int id) {
         return memberRepository.findById(id);
-    }
-    public List<Member> findAll() {
-        return memberRepository.findAll();
     }
 }
