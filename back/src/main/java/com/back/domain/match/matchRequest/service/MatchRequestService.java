@@ -7,14 +7,17 @@ import com.back.domain.member.member.entity.Member;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class MatchRequestService {
     private final MatchRequestRepository matchRequestRepository;
 
+    @Transactional
     public MatchRequest create(Member member, String situation) {
         if (matchRequestRepository.existsByMemberAndStatus(member, MatchStatus.PENDING)) {
             throw new ServiceException("409-1", "이미 진행 중인 매칭 요청이 있습니다.");
@@ -24,6 +27,7 @@ public class MatchRequestService {
         return matchRequest;
     }
 
+    @Transactional
     public void tryMatch(MatchRequest matchRequest) {
         String industry = matchRequest.getMember().getIndustry();
         String situation = matchRequest.getSituation();
@@ -42,5 +46,10 @@ public class MatchRequestService {
             matchRequestRepository.save(matchRequest);
             matchRequestRepository.save(other);
         });
+    }
+
+    public MatchRequest findById(UUID id) {
+        return matchRequestRepository.findById(id)
+                .orElseThrow(() -> new ServiceException("404-1", "매칭 요청을 찾을 수 없습니다."));
     }
 }
