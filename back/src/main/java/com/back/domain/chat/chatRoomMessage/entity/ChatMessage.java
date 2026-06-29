@@ -24,15 +24,11 @@ public class ChatMessage extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    private LocalDateTime createdAt;
-    private LocalDateTime modifiedAt;
 
     public  ChatMessage(ChatRoom chatRoom, ChatRoomParticipant participant, String content) {
         this.chatRoom = chatRoom;
         this.participant = participant;
         this.content = content;
-        this.createdAt = LocalDateTime.now();
-        this.modifiedAt = LocalDateTime.now();
     }
 
 }
