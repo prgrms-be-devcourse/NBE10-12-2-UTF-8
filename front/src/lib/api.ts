@@ -76,15 +76,15 @@ export const apiDeleteMe = () => req<null>('/api/v1/members/me', { method: 'DELE
 /* ── Match ──────────────────────────────────────────────────────── */
 export const apiCreateMatch = (situation: string) =>
   req<{ matchRequestId: string; status: string; requestedAt: string }>(
-    '/api/v1/matchs',
+    '/api/v1/matches',
     { method: 'POST', body: JSON.stringify({ situation }) }
   );
 
 export const apiGetMatch = (matchRequestId: string) =>
-  req<{ status: string; chatRoomId?: string }>(`/api/v1/matchs/${matchRequestId}`);
+  req<{ status: string; chatRoomId?: string }>(`/api/v1/matches/${matchRequestId}`);
 
 export const apiCancelMatch = (matchRequestId: string) =>
-  req<null>(`/api/v1/matchs/${matchRequestId}`, { method: 'DELETE' });
+  req<null>(`/api/v1/matches/${matchRequestId}`, { method: 'DELETE' });
 
 /* ── Chat ───────────────────────────────────────────────────────── */
 export const apiGetRoom = (roomId: string) =>
@@ -113,7 +113,7 @@ export const apiGetMessages = (roomId: string, after?: string) =>
 
 /* ── Admin ──────────────────────────────────────────────────────── */
 export type AdminMember = {
-  id: string;
+  memberId: string;
   email: string;
   industry: string;
   isSuspended: boolean;
@@ -132,4 +132,4 @@ export const apiGetAdminMembers = (page = 0, size = 10) =>
     totalPages: number;
     totalElements: number;
     pageable: { pageNumber: number; pageSize: number };
-  }>(`/api/v1/admin/members?page=${page}&size=${size}`);
+  }>(`/api/v1/adm/members?page=${page}&size=${size}`);

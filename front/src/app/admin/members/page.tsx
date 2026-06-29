@@ -92,8 +92,8 @@ export default function AdminMembersPage() {
             const statusBg = m.isSuspended ? '#fce8e6' : '#e6f4ea';
             const statusColor = m.isSuspended ? '#c5221f' : '#137333';
             return (
-              <div key={m.id} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.5fr 1fr 1fr 0.7fr', alignItems: 'center', padding: '13px 18px', borderTop: '1px solid #f3f3f3', fontSize: 13, color: '#202124' }}>
-                <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#80868b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.id}</span>
+              <div key={m.memberId} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.5fr 1fr 1fr 0.7fr', alignItems: 'center', padding: '13px 18px', borderTop: '1px solid #f3f3f3', fontSize: 13, color: '#202124' }}>
+                <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#80868b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.memberId}</span>
                 <span>{m.email}</span>
                 <span style={{ color: '#3c4043' }}>{displayInd}</span>
                 <span style={{ color: '#5f6368' }}>{fmtDate(m.createdAt)}</span>
