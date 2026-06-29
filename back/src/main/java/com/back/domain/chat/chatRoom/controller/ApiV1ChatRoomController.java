@@ -32,7 +32,6 @@ public class ApiV1ChatRoomController {
     private final Rq rq;
 
     @GetMapping("/{roomId}")
-    @Transactional(readOnly = true)
     @Operation(summary = "채팅방 정보 조회")
     public RsData<ChatRoomDto> getRoom(@PathVariable UUID roomId) {
         ChatRoom chatRoom = chatRoomService.getChatRoom(roomId);

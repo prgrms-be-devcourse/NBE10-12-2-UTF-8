@@ -5,11 +5,13 @@ import com.back.domain.member.member.entity.Member;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ChatRoomParticipantService {
 
     private final ChatRoomParticipantRepository chatRoomParticipantRepository;
