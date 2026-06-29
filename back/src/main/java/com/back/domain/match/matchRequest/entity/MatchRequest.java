@@ -7,6 +7,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @NoArgsConstructor
@@ -26,11 +28,17 @@ public class MatchRequest extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private MatchStatus status;
 
+    private LocalDateTime requested_at;
+    private LocalDateTime modified_at;
+
     public MatchRequest(Member member, ChatRoom room, String industry, String situation) {
         this.member = member;
         this.room = room;
         this.industry = industry;
         this.situation = situation;
         this.status = MatchStatus.PENDING;
+        this.requested_at = requested_at;
+        this.modified_at = modified_at;
+
     }
 }
