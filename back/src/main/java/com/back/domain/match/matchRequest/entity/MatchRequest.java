@@ -36,6 +36,6 @@ public class MatchRequest extends BaseEntity {
         this.industry = industry;
         this.situation = situation;
         this.status = MatchStatus.PENDING;
-        this.requestedAt =requestedAt;
+        this.requestedAt = LocalDateTime.now();
     }
 }
