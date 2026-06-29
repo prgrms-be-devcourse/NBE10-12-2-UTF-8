@@ -47,7 +47,7 @@ async function req<T>(path: string, options?: RequestInit): Promise<T> {
   });
   if (res.status === 204) return null as T;
   const body = await res.json();
-  if (!res.ok) throw Object.assign(new Error(body?.message ?? res.statusText), { status: res.status });
+  if (!res.ok) throw Object.assign(new Error(body?.msg ?? res.statusText), { status: res.status });
   return body.data as T;
 }
 

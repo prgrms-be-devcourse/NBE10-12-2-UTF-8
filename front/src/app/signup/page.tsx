@@ -38,7 +38,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const pwOk = password.length >= 8;
+  const pwOk = password.length >= 4;
   const canSubmit = !!(email && pwOk && password === confirm && selected && !loading);
 
   const handleSignup = async () => {
@@ -98,7 +98,7 @@ export default function SignupPage() {
           </div>
         </div>
         <div style={{ fontSize: 11.5, color: pwOk ? '#34a06b' : '#9aa0a6', marginBottom: 22 }}>
-          {pwOk ? '✓ 8자 이상 · 안전한 비밀번호예요' : '비밀번호는 8자 이상으로 입력해주세요'}
+          {pwOk ? '✓ 4자 이상 · 사용 가능한 비밀번호예요' : '비밀번호는 4자 이상으로 입력해주세요'}
         </div>
 
         {/* Industry */}
