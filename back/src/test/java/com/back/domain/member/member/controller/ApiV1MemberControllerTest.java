@@ -142,4 +142,55 @@ public class ApiV1MemberControllerTest {
         resultActions
                 .andExpect(status().isUnauthorized());
     }
+    @Test
+    @DisplayName("로그아웃")
+    void t5() throws Exception {
+        // Given - 회원가입 선행
+        mvc.perform(
+                post("/api/v1/members/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                 "email": "test@test.com",
+                                 "password": "1234",
+                                 "industry": "IT"
+                            }
+                            """)
+        );
+
+        // Given - 로그인 선행
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "test@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/members/logout")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("로그아웃 생성 성공"));
+    }
 }
