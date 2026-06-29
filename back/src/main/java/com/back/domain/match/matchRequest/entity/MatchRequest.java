@@ -21,8 +21,6 @@ public class MatchRequest extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id")
     private ChatRoom room;
-
-    private String industry;
     private String situation;
 
     @Enumerated(EnumType.STRING)
@@ -30,12 +28,16 @@ public class MatchRequest extends BaseEntity {
 
     private LocalDateTime requestedAt;
 
-    public MatchRequest(Member member, ChatRoom room, String industry, String situation) {
+    public MatchRequest(Member member, String situation) {
         this.member = member;
-        this.room = room;
-        this.industry = industry;
         this.situation = situation;
         this.status = MatchStatus.PENDING;
         this.requestedAt = LocalDateTime.now();
     }
+
+    public void matchWith(ChatRoom room) {
+        this.room = room;
+        this.status = MatchStatus.MATCHED;
+    }
+
 }
