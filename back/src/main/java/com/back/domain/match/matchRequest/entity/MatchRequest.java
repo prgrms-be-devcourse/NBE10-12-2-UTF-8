@@ -21,15 +21,19 @@ public class MatchRequest extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id")
     private ChatRoom room;
+    private String industry;
     private String situation;
+
 
     @Enumerated(EnumType.STRING)
     private MatchStatus status;
 
     private LocalDateTime requestedAt;
 
+
     public MatchRequest(Member member, String situation) {
         this.member = member;
+        this.industry = member.getIndustry();
         this.situation = situation;
         this.status = MatchStatus.PENDING;
         this.requestedAt = LocalDateTime.now();
