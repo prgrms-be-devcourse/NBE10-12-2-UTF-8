@@ -13,13 +13,13 @@ import java.util.UUID;
 public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID> {
     boolean existsByMemberAndStatus(Member member, MatchStatus status);
 
-    @Query("SELECT r FROM MatchRequest r WHERE r.member.industry = :industry AND r.situation = :situation AND r.status = :status")
+    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry AND r.situation = :situation AND r.status = :status")
     Optional<MatchRequest> findPendingByIndustryAndSituation(
             @Param("industry") String industry,
             @Param("situation") String situation,
             @Param("status") MatchStatus status);
 
-    @Query("SELECT r FROM MatchRequest r WHERE r.member.industry = :industry AND r.status = :status")
+    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry  AND r.status = :status")
     Optional<MatchRequest> findPendingByIndustry(
             @Param("industry") String industry,
             @Param("status") MatchStatus status);
