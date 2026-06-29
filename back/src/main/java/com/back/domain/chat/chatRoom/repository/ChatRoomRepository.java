@@ -1,4 +1,7 @@
 package com.back.domain.chat.chatRoom.repository;
+import com.back.domain.chat.chatRoom.entity.ChatRoom;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.UUID;
 
-public interface ChatRoomRepository {
+public interface ChatRoomRepository extends JpaRepository<ChatRoom, UUID> {
 }
