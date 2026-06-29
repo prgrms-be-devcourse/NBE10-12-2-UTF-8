@@ -72,4 +72,64 @@ public class ApiV1AdmMemberControllerTest {
                 .andExpect(jsonPath("$.data.pageable.pageNumber").value(0))
                 .andExpect(jsonPath("$.data.pageable.pageSize").value(10));
     }
+    @Test
+    @DisplayName("관리자 회원 단건 조회")
+    void t2() throws Exception {
+        // Given - 관리자 로그인
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "admin@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        // Given - 조회할 memberId 가져오기
+        String membersResponse = mvc.perform(
+                        get("/api/v1/adm/members")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String memberId = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(membersResponse)
+                .path("data")
+                .path("content")
+                .get(0)
+                .path("memberId")
+                .asText();
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        get("/api/v1/adm/members/" + memberId)
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("회원 단건 조회 성공"))
+                .andExpect(jsonPath("$.data.memberId").exists())
+                .andExpect(jsonPath("$.data.email").exists())
+                .andExpect(jsonPath("$.data.industry").exists())
+                .andExpect(jsonPath("$.data.isSuspended").exists())
+                .andExpect(jsonPath("$.data.createdAt").exists());
+    }
 }

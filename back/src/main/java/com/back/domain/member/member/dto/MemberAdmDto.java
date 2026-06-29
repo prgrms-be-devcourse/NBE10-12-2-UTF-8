@@ -5,7 +5,7 @@ import com.back.domain.member.member.entity.Member;
 import java.time.LocalDateTime;
 
 public record MemberAdmDto(
-        String id,
+        String memberId,
         String email,
         String industry,
         boolean isSuspended,

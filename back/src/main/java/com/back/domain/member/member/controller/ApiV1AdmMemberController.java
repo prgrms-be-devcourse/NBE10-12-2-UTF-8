@@ -2,7 +2,9 @@ package com.back.domain.member.member.controller;
 
 
 import com.back.domain.member.member.dto.MemberAdmDto;
+import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.service.MemberService;
+import com.back.global.exception.ServiceException;
 import com.back.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -11,10 +13,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/adm/members")
@@ -40,14 +41,16 @@ public class ApiV1AdmMemberController {
                 members
         );
     }
-//    @GetMapping("/{id}")
-//    @Transactional(readOnly = true)
-//    @Operation(summary = "단건 조회")
-//    public MemberWithUsernameDto getItem(
-//            @PathVariable int id
-//    ) {
-//        Member member = memberService.findById(id).get();
-//
-//        return new MemberWithUsernameDto(member);
-//    }
+    @GetMapping("/{memberId}")
+    @Operation(summary = "회원 단건 조회")
+    public RsData<MemberAdmDto> getItem(@PathVariable UUID memberId) {
+        Member member = memberService.findById(memberId)
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
+
+        return new RsData<>(
+                "200-1",
+                "회원 단건 조회 성공",
+                new MemberAdmDto(member)
+        );
+    }
 }
