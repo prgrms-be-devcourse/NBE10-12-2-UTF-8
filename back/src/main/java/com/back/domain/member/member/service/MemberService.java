@@ -4,6 +4,8 @@ import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.repository.MemberRepository;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -63,5 +65,8 @@ public class MemberService {
         Member findMember = memberRepository.findById(member.getId())
                 .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
         findMember.updateRefreshToken(null);
+    }
+    public Page<Member> findAll(Pageable pageable) {
+        return memberRepository.findAll(pageable);
     }
 }

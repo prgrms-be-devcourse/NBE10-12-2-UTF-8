@@ -1,0 +1,23 @@
+package com.back.domain.member.member.dto;
+
+import com.back.domain.member.member.entity.Member;
+
+import java.time.LocalDateTime;
+
+public record MemberAdmDto(
+        String id,
+        String email,
+        String industry,
+        boolean isSuspended,
+        LocalDateTime createdAt
+) {
+    public MemberAdmDto(Member member) {
+        this(
+                member.getId().toString(),
+                member.getEmail(),
+                member.getIndustry(),
+                member.isSuspended(),
+                member.getCreatedAt()
+        );
+    }
+}
