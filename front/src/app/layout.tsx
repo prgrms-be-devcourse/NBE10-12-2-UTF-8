@@ -9,8 +9,8 @@ const baloo2 = Baloo_2({
 });
 
 export const metadata: Metadata = {
-  title: "findle",
-  description: "익명 직장인 랜덤 채팅 매칭 서비스",
+  title: "Tangbisil",
+  description: "검색으로 위장한 익명 직장인 매칭·채팅 서비스",
 };
 
 export default function RootLayout({

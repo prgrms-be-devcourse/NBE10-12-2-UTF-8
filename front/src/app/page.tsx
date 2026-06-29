@@ -5,64 +5,118 @@ import Link from 'next/link';
 import {
   apiCreateMatch, apiGetMatch, apiCancelMatch,
   apiGetRoom, apiSendMessage, apiGetMessages,
-  getToken, type ChatMsg,
+  apiGetMe, getToken, INDUSTRY_NAMES, type ChatMsg,
 } from '@/lib/api';
 
 type Phase = 'search' | 'matching' | 'chatting';
 
 const TOPICS = [
-  '야근 중', '퇴사 충동', '사내 갑질 토론', '이직 뻘짓',
-  '사내 정치 피로', '이직 말려요', '연봉 협상 앞둔', '몰래 루팡 중',
+  { label: '야근 중',       count: '3.2천' },
+  { label: '퇴사 충동',     count: '2.1천' },
+  { label: '사내 갑질 토론', count: '1.8천' },
+  { label: '이직 뻘짓',     count: '2.6천' },
+  { label: '사내 정치 피로', count: '1.4천' },
+  { label: '이직 말려요',    count: '2.9천' },
+  { label: '연봉 협상 앞둔', count: '980'  },
+  { label: '몰래 루팡 중',   count: '1.7천' },
+  { label: '기타',           count: '540'  },
 ];
 
-const ROOM_STORAGE_KEY = 'bisil_room_id';
+const ROOM_KEY = 'tangbisil_room_id';
 
-function BisilLogo({ size = 26 }: { size?: number }) {
+/* ─── Logo ─────────────────────────────────────────── */
+const LOGO_CHARS = [
+  { c: 'T', color: '#3b7ff2' }, { c: 'a', color: '#ea4c4c' },
+  { c: 'n', color: '#f5b400' }, { c: 'g', color: '#3b7ff2' },
+  { c: 'b', color: '#34a06b' }, { c: 'i', color: '#ea4c4c' },
+  { c: 's', color: '#f5b400' }, { c: 'i', color: '#3b7ff2' },
+  { c: 'l', color: '#34a06b' },
+];
+
+function TangbisilLogo({ size = 26 }: { size?: number }) {
+  const ls = size >= 50 ? '-1.5px' : size >= 35 ? '-1.2px' : size >= 22 ? '-0.8px' : '-0.6px';
   return (
-    <span style={{ fontFamily: "var(--font-baloo2), 'Baloo 2', sans-serif", fontSize: size, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.5px', userSelect: 'none' }}>
-      <span style={{ color: '#3b7ff2' }}>B</span>
-      <span style={{ color: '#ea4c4c' }}>i</span>
-      <span style={{ color: '#f5b400' }}>s</span>
-      <span style={{ color: '#3b7ff2' }}>i</span>
-      <span style={{ color: '#34a06b' }}>l</span>
+    <span style={{ fontFamily: "var(--font-baloo2), 'Baloo 2', sans-serif", fontSize: size, fontWeight: 700, lineHeight: 1, letterSpacing: ls, userSelect: 'none' }}>
+      {LOGO_CHARS.map(({ c, color }, i) => <span key={i} style={{ color }}>{c}</span>)}
     </span>
   );
 }
 
-function LiveDot() {
+/* ─── Icons ─────────────────────────────────────────── */
+function SearchIcon() {
   return (
-    <span
-      className="w-2 h-2 rounded-full inline-block flex-shrink-0"
-      style={{ backgroundColor: '#34a06b', animation: 'livePulse 2s ease-in-out infinite' }}
-    />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+      <circle cx="11" cy="11" r="7" stroke="#9aa0a6" strokeWidth="2" />
+      <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="#9aa0a6" strokeWidth="2" strokeLinecap="round" />
+    </svg>
   );
 }
 
-export default function HomePage() {
-  const [phase, setPhase] = useState<Phase>('search');
-  const [situation, setSituation] = useState('');
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
-  const [input, setInput] = useState('');
-  const [elapsed, setElapsed] = useState(0);
-  const [chatTimeLeft, setChatTimeLeft] = useState(600);
-  const [showResume, setShowResume] = useState(false);
+function MicIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+      <rect x="9" y="3" width="6" height="11" rx="3" fill="#3b7ff2" />
+      <path d="M5 11a7 7 0 0 0 14 0" stroke="#f5b400" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <line x1="12" y1="18" x2="12" y2="21" stroke="#34a06b" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
-  const phaseRef = useRef<Phase>('search');
+function XIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+      <line x1="6" y1="6" x2="18" y2="18" stroke="#70757a" strokeWidth="2" strokeLinecap="round" />
+      <line x1="18" y1="6" x2="6" y2="18" stroke="#70757a" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+      <rect x="5" y="11" width="14" height="9" rx="2" stroke="#3b7ff2" strokeWidth="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="#3b7ff2" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function ClockIcon({ stroke }: { stroke: string }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+      <circle cx="12" cy="12" r="9" stroke={stroke} strokeWidth="2" />
+      <path d="M12 7v5l3.5 2" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* ─── Page ─────────────────────────────────────────── */
+export default function HomePage() {
+  const [phase, setPhase]               = useState<Phase>('search');
+  const [situation, setSituation]       = useState('');
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [messages, setMessages]         = useState<ChatMsg[]>([]);
+  const [input, setInput]               = useState('');
+  const [elapsed, setElapsed]           = useState(0);
+  const [chatTimeLeft, setChatTimeLeft] = useState(600);
+  const [showResume, setShowResume]     = useState(false);
+  const [userIndustry, setUserIndustry] = useState('');
+  const [matchSituation, setMatchSituation] = useState('');
+  const [isLoggedIn, setIsLoggedIn]     = useState(false);
+
+  const phaseRef          = useRef<Phase>('search');
   const matchRequestIdRef = useRef<string | null>(null);
-  const chatRoomIdRef = useRef<string | null>(null);
-  const seenMsgIds = useRef<Set<string>>(new Set());
-  const lastMsgTimeRef = useRef<string | undefined>(undefined);
-  const matchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const msgPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const chatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const chatRoomIdRef     = useRef<string | null>(null);
+  const seenMsgIds        = useRef<Set<string>>(new Set());
+  const lastMsgTimeRef    = useRef<string | undefined>(undefined);
+  const matchPollRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+  const msgPollRef        = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const chatTimerRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+  const chatEndRef        = useRef<HTMLDivElement>(null);
+  const inputRef          = useRef<HTMLInputElement>(null);
 
   const setPhaseSync = useCallback((p: Phase) => {
-    phaseRef.current = p;
-    setPhase(p);
+    phaseRef.current = p; setPhase(p);
   }, []);
 
   const stopAll = useCallback(() => {
@@ -77,9 +131,10 @@ export default function HomePage() {
     matchRequestIdRef.current = null;
     seenMsgIds.current.clear();
     lastMsgTimeRef.current = undefined;
-    localStorage.removeItem(ROOM_STORAGE_KEY);
+    localStorage.removeItem(ROOM_KEY);
     setMessages([]);
     setInput('');
+    setMatchSituation('');
     setChatTimeLeft(600);
     setPhaseSync('search');
   }, [stopAll, setPhaseSync]);
@@ -106,7 +161,7 @@ export default function HomePage() {
 
   const enterChat = useCallback(async (roomId: string) => {
     chatRoomIdRef.current = roomId;
-    localStorage.setItem(ROOM_STORAGE_KEY, roomId);
+    localStorage.setItem(ROOM_KEY, roomId);
     setPhaseSync('chatting');
     try {
       const room = await apiGetRoom(roomId);
@@ -124,11 +179,7 @@ export default function HomePage() {
       setChatTimeLeft(600);
       if (chatTimerRef.current) clearInterval(chatTimerRef.current);
       chatTimerRef.current = setInterval(() => {
-        setChatTimeLeft(prev => {
-          const next = prev - 1;
-          if (next <= 0) { endChat(); return 0; }
-          return next;
-        });
+        setChatTimeLeft(prev => { const n = prev - 1; if (n <= 0) { endChat(); return 0; } return n; });
       }, 1000);
     }
     startMsgPoll();
@@ -153,6 +204,7 @@ export default function HomePage() {
 
   const doStartMatch = useCallback(async () => {
     const sit = situation.trim() || selectedTopic || '대화 중';
+    setMatchSituation(sit);
     try {
       const data = await apiCreateMatch(sit);
       matchRequestIdRef.current = data.matchRequestId;
@@ -177,6 +229,7 @@ export default function HomePage() {
     stopAll();
     const id = matchRequestIdRef.current;
     matchRequestIdRef.current = null;
+    setMatchSituation('');
     setPhaseSync('search');
     if (id) { try { await apiCancelMatch(id); } catch { /* ignore */ } }
   }, [stopAll, setPhaseSync]);
@@ -191,25 +244,25 @@ export default function HomePage() {
       const sent = await apiSendMessage(roomId, content);
       if (!seenMsgIds.current.has(sent.messageId)) {
         seenMsgIds.current.add(sent.messageId);
-        const msg: ChatMsg = {
-          messageId: sent.messageId,
-          senderNickname: sent.senderNickname,
-          content: sent.content,
-          createdAt: sent.createdAt,
-          isMine: true,
-        };
-        setMessages(prev => [...prev, msg]);
+        setMessages(prev => [...prev, {
+          messageId: sent.messageId, senderNickname: sent.senderNickname,
+          content: sent.content, createdAt: sent.createdAt, isMine: true,
+        }]);
         lastMsgTimeRef.current = sent.createdAt;
       }
     } catch (err) { console.error(err); }
   }, [input]);
 
-  // Check for in-progress chat on mount
+  // On mount: check auth + industry + in-progress chat
   useEffect(() => {
-    const savedRoomId = localStorage.getItem(ROOM_STORAGE_KEY);
-    if (savedRoomId && getToken()) {
-      chatRoomIdRef.current = savedRoomId;
-      setShowResume(true);
+    const token = getToken();
+    setIsLoggedIn(!!token);
+    if (token) {
+      apiGetMe()
+        .then(me => setUserIndustry(INDUSTRY_NAMES[me.industry] ?? me.industry))
+        .catch(() => {});
+      const savedRoomId = localStorage.getItem(ROOM_KEY);
+      if (savedRoomId) { chatRoomIdRef.current = savedRoomId; setShowResume(true); }
     }
   }, []);
 
@@ -228,268 +281,254 @@ export default function HomePage() {
 
   const partnerNickname = messages.find(m => !m.isMine)?.senderNickname ?? '익명의 상대';
 
+  /* ── Shared styles ─────────────────────────────────── */
+  const s = {
+    root: { minHeight: '100vh', display: 'flex', flexDirection: 'column' as const, background: '#fff', fontFamily: "Arial, 'Helvetica Neue', sans-serif" },
+    nav:  { height: 50, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 18, padding: '0 22px' } as const,
+    navText: { fontSize: 13, color: '#202124', cursor: 'pointer' } as const,
+    center: { flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', paddingBottom: 40 },
+    card: { width: 560, background: '#fff', borderRadius: 24, boxShadow: '0 1px 10px rgba(32,33,36,.18)', marginTop: 20 } as const,
+    searchRow: { height: 46, display: 'flex', alignItems: 'center', gap: 13, padding: '0 16px' } as const,
+    sep: { height: 1, background: '#e8eaed', margin: '0 14px' } as const,
+    industryRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '6px 18px', borderBottom: '1px solid #e8eaed' } as const,
+    hintRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 18px' } as const,
+    hintText: { fontSize: 11, color: '#bdc1c6' } as const,
+    footer: { flexShrink: 0, background: '#f2f2f2', borderTop: '1px solid #e4e4e4', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 24px' } as const,
+  };
+
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#f1f3f4', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
+    <div style={s.root}>
+      {/* ── Top nav ── */}
+      <div style={s.nav}>
+        <span style={s.navText}>메일</span>
+        <span style={s.navText}>이미지</span>
+        {isLoggedIn ? (
+          <Link href="/me" style={{ textDecoration: 'none' }}>
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#3b7ff2', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>나</div>
+          </Link>
+        ) : (
+          <Link href="/login" style={{ textDecoration: 'none', padding: '7px 15px', background: '#3b7ff2', color: '#fff', borderRadius: 6, fontSize: 13, fontWeight: 600 }}>로그인</Link>
+        )}
+      </div>
 
-      {/* ── SEARCH PHASE ── */}
-      {phase === 'search' && (
-        <div className="flex-1 flex flex-col">
-          {/* Top nav */}
-          <div className="flex items-center justify-between px-6 py-3 text-sm text-[#5f6368]">
-            <BisilLogo size={22} />
-            <div className="flex items-center gap-5">
-              <span className="hover:text-[#3c4043] cursor-pointer select-none">Gmail</span>
-              <span className="hover:text-[#3c4043] cursor-pointer select-none">이미지</span>
-              <span className="flex items-center gap-1.5">
-                <LiveDot />
-                <span className="text-[11px] font-semibold text-[#34a06b] tracking-wider">LIVE</span>
-              </span>
-              <Link
-                href="/login"
-                className="bg-[#3b7ff2] text-white px-4 py-1.5 rounded text-sm hover:bg-[#2d6de0] transition-colors"
-                style={{ textDecoration: 'none' }}
-              >
-                로그인
-              </Link>
-            </div>
-          </div>
+      {/* ── Center (dimmed when resume modal open) ── */}
+      <div style={{ ...s.center, opacity: showResume ? 0.5 : 1, pointerEvents: showResume ? 'none' : 'auto' }}>
+        <TangbisilLogo size={58} />
 
-          {/* Center */}
-          <div className="flex-1 flex flex-col items-center justify-center px-6 pb-24 gap-8">
-            <div className="flex flex-col items-center gap-2.5">
-              <BisilLogo size={72} />
-              <p className="text-[#5f6368] text-[15px]">익명 직장인 랜덤 매칭 서비스</p>
-              <div className="flex items-center gap-1.5 text-[13px] text-[#5f6368]">
-                <LiveDot />
-                <span>현재 <strong className="text-[#3c4043]">13,590명</strong> 접속 중</span>
-              </div>
-            </div>
+        {/* ── Card ── */}
+        <div style={s.card}>
 
-            {/* Input area */}
-            <div className="w-full max-w-[584px] flex flex-col gap-3">
-              <div
-                className="flex items-center border border-[#dfe1e5] rounded-full bg-white hover:shadow-md hover:border-transparent px-4 gap-3 transition-shadow"
-                style={{ height: 48 }}
-              >
-                <svg className="w-5 h-5 text-[#9aa0a6] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <input
-                  type="text"
-                  value={situation}
-                  onChange={e => { setSituation(e.target.value); setSelectedTopic(null); }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) startMatch();
-                  }}
-                  placeholder="지금 상황을 입력하세요... (예: 야근 중, 이직 고민)"
-                  className="flex-1 py-2.5 text-[#3c4043] text-base outline-none bg-transparent placeholder-[#9aa0a6]"
-                />
-                {(situation || selectedTopic) && (
-                  <button
-                    onClick={() => { setSituation(''); setSelectedTopic(null); }}
-                    className="p-1 hover:bg-[#f1f3f4] rounded-full transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-[#9aa0a6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-              </div>
+          {/* Search bar row */}
+          <div style={s.searchRow}>
+            <SearchIcon />
 
-              <div className="flex justify-center gap-3">
-                <button
-                  onClick={startMatch}
-                  className="px-5 py-2 bg-[#f8f9fa] text-[#3c4043] text-sm rounded border border-[#f8f9fa] hover:border-[#dadce0] hover:shadow-sm transition-all"
-                >
-                  랜덤 매칭 시작
-                </button>
-                <button
-                  onClick={startMatch}
-                  className="px-5 py-2 bg-[#f8f9fa] text-[#3c4043] text-sm rounded border border-[#f8f9fa] hover:border-[#dadce0] hover:shadow-sm transition-all"
-                >
-                  운 좋은 매칭
-                </button>
-              </div>
-            </div>
-
-            {/* Topic chips */}
-            <div className="w-full max-w-[584px]">
-              <p className="text-[11px] text-[#9aa0a6] mb-2 font-medium uppercase tracking-wide">실시간 토픽</p>
-              <div className="flex flex-wrap gap-2">
-                {TOPICS.map(t => {
-                  const active = selectedTopic === t;
-                  return (
-                    <button
-                      key={t}
-                      onClick={() => { setSelectedTopic(prev => prev === t ? null : t); setSituation(''); }}
-                      className={`px-3 py-1.5 rounded-full border text-sm transition-all ${
-                        active
-                          ? 'border-[#3b7ff2] bg-[#e8f0fe] text-[#3b7ff2]'
-                          : 'border-[#dfe1e5] bg-white text-[#3c4043] hover:border-[#bfbfbf] hover:shadow-sm'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MATCHING PHASE ── */}
-      {phase === 'matching' && (
-        <div className="flex-1 flex flex-col">
-          <div className="flex items-center justify-between px-6 py-3">
-            <BisilLogo size={22} />
-            <button
-              onClick={cancelMatch}
-              className="text-sm text-[#ea4c4c] hover:text-[#c0392b] font-medium"
-            >
-              취소
-            </button>
-          </div>
-          <div className="flex-1 flex flex-col items-center justify-center gap-6 pb-20">
-            <BisilLogo size={72} />
-            <div className="flex items-center gap-0.5 text-[26px] text-[#5f6368] font-medium">
-              <span>매칭 중</span>
-              {[0, 0.3, 0.6].map((delay, i) => (
-                <span key={i} style={{ animation: `blink 1.2s ease-in-out ${delay}s infinite` }}>.</span>
-              ))}
-            </div>
-            <p className="text-[#9aa0a6] text-sm font-mono tabular-nums">{fmtTimer(elapsed)} 경과</p>
-            <button
-              onClick={cancelMatch}
-              className="mt-2 px-7 py-2.5 border border-[#ea4c4c] text-[#ea4c4c] rounded-full text-sm hover:bg-[#fce8e6] transition-colors"
-            >
-              매칭 취소
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── CHATTING PHASE ── */}
-      {phase === 'chatting' && (
-        <div className="flex-1 flex flex-col bg-white" style={{ minHeight: '100vh' }}>
-          {/* Header */}
-          <div style={{ height: 54, flexShrink: 0, display: 'flex', alignItems: 'center', padding: '0 16px', borderBottom: '1px solid #e8eaed', gap: 12 }}>
-            <BisilLogo size={52} />
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-              <span style={{ fontSize: 13, color: '#5f6368' }}>{partnerNickname}</span>
-              <span style={{ fontFamily: 'monospace', fontSize: 15, fontWeight: 700, color: chatTimeLeft <= 60 ? '#ea4c4c' : '#3b7ff2' }}>
-                {fmtTimer(chatTimeLeft)}
-              </span>
-            </div>
-            <button
-              onClick={endChat}
-              style={{ padding: '7px 14px', background: '#fce8e6', color: '#ea4c4c', borderRadius: 20, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', flexShrink: 0 }}
-            >
-              채팅 종료
-            </button>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3" style={{ background: '#fafafa' }}>
-            {messages.length === 0 && (
-              <div className="flex-1 flex items-center justify-center text-[#bdc1c6] text-sm select-none">
-                대화를 시작해보세요 👋
-              </div>
+            {/* Input / display */}
+            {phase === 'search' && (
+              <input
+                type="text"
+                value={situation}
+                onChange={e => { setSituation(e.target.value); setSelectedTopic(null); }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) startMatch(); }}
+                placeholder="관심사를 입력하거나 상황을 골라 매칭하세요"
+                style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: '#3c4043', background: 'transparent' }}
+              />
             )}
-            {messages.map(msg => (
-              <div key={msg.messageId} className={`flex items-end gap-2 ${msg.isMine ? 'justify-end' : 'justify-start'}`}>
-                {!msg.isMine && (
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 self-end"
-                    style={{ background: '#3b7ff2' }}
-                  >
-                    {msg.senderNickname?.[0] ?? '?'}
-                  </div>
-                )}
-                <div
-                  className={`max-w-[68%] px-3.5 py-2 text-sm leading-relaxed ${
-                    msg.isMine
-                      ? 'bg-[#3b7ff2] text-white rounded-[18px] rounded-br-[4px]'
-                      : 'bg-white text-[#3c4043] rounded-[18px] rounded-bl-[4px] border border-[#e8eaed]'
-                  }`}
-                >
-                  {msg.content}
-                </div>
-              </div>
-            ))}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Footer */}
-          <div style={{ borderTop: '1px solid #e8eaed', background: '#fff' }}>
-            <div className="flex items-center gap-2 px-4 py-2.5">
+            {phase === 'matching' && (
+              <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 9, fontSize: 16, color: '#3b7ff2' }}>
+                <span style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                  {[0, 0.2, 0.4].map((d, i) => (
+                    <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#3b7ff2', display: 'inline-block', animation: `blink 1.1s infinite ${d}s` }} />
+                  ))}
+                </span>
+                매칭 중... {elapsed}s
+              </span>
+            )}
+            {phase === 'chatting' && (
               <input
                 ref={inputRef}
                 type="text"
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                    e.preventDefault();
-                    send();
-                  }
-                }}
-                placeholder="메시지를 입력하세요..."
-                className="flex-1 border border-[#dfe1e5] rounded-full px-4 py-2 text-sm outline-none focus:border-[#3b7ff2] focus:shadow-[0_0_0_2px_rgba(59,127,242,0.15)] transition-all"
+                onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }}
+                placeholder="메시지를 입력하고 Enter"
+                style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: '#3c4043', background: 'transparent' }}
               />
-              <button
-                onClick={send}
-                disabled={!input.trim()}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-[#3b7ff2] text-white hover:bg-[#2d6de0] disabled:bg-[#e8eaed] disabled:text-[#bdc1c6] disabled:cursor-not-allowed transition-colors flex-shrink-0"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </button>
+            )}
+
+            {/* Right: clear / cancel */}
+            {phase === 'search' && situation && (
+              <button onClick={() => setSituation('')} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2 }}><XIcon /></button>
+            )}
+            {phase === 'matching' && (
+              <button onClick={cancelMatch} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2 }}><XIcon /></button>
+            )}
+
+            <div style={{ width: 1, height: 24, background: '#dfe1e5', flexShrink: 0 }} />
+            <MicIcon />
+          </div>
+
+          <div style={s.sep} />
+
+          {/* 내 산업군 row */}
+          <div style={s.industryRow}>
+            <span style={{ fontSize: 11.5, color: '#9aa0a6', flexShrink: 0 }}>내 산업군</span>
+            {userIndustry ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 11px', background: '#f3f8ff', color: '#3b7ff2', borderRadius: 14, fontSize: 12.5, fontWeight: 600, flexShrink: 0 }}>
+                <LockIcon />{userIndustry}
+              </span>
+            ) : (
+              <span style={{ fontSize: 11.5, color: '#bdc1c6' }}>로그인 후 확인</span>
+            )}
+            {(phase === 'matching' || phase === 'chatting') && matchSituation && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 11px', background: '#e8f0fe', border: '1px solid #3b7ff2', color: '#1a56c4', borderRadius: 14, fontSize: 12.5, fontWeight: 600, flexShrink: 0 }}>
+                {matchSituation}
+              </span>
+            )}
+            {phase === 'search' && userIndustry && (
+              <span style={{ fontSize: 11, color: '#bdc1c6' }}>가입 시 선택한 업계로 고정</span>
+            )}
+            <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#9aa0a6', flexShrink: 0 }}>지금 13,590명 활동 중</span>
+          </div>
+
+          {/* ── SEARCH body: topic chips ── */}
+          {phase === 'search' && (
+            <div style={{ padding: '12px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ea4c4c', display: 'inline-block' }} />
+                <span style={{ fontSize: 11.5, color: '#5f6368' }}>지금 가장 많이 얘기되는 상황 — 골라서 매칭하세요</span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {TOPICS.map(t => {
+                  const active = selectedTopic === t.label;
+                  return (
+                    <span
+                      key={t.label}
+                      onClick={() => { setSelectedTopic(active ? null : t.label); setSituation(''); }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: active ? '#e8f0fe' : '#f8f9fa', border: `1px solid ${active ? '#3b7ff2' : '#e8eaed'}`, borderRadius: 16, fontSize: 13, color: active ? '#3b7ff2' : '#3c4043', fontWeight: active ? 600 : 400, cursor: 'pointer' }}
+                    >
+                      {t.label}
+                      <span style={{ color: '#80868b', fontSize: 11.5 }}>{t.count}</span>
+                    </span>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex items-center justify-center gap-3 px-4 pb-3 text-[11px] text-[#bdc1c6] select-none">
-              <span>10분이 지나면 대화는 자동으로 종료돼요</span>
-              <span>|</span>
-              <span>Enter 전송 · ⚑ 신고</span>
+          )}
+
+          {/* ── MATCHING body: spinner ── */}
+          {phase === 'matching' && (
+            <div style={{ padding: '34px 18px 30px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+              <span style={{ width: 40, height: 40, border: '3px solid #e8eaed', borderTopColor: '#3b7ff2', borderRadius: '50%', animation: 'spin .9s linear infinite', display: 'inline-block' }} />
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 15, color: '#202124', fontWeight: 600 }}>같은 업계의 익명의 동료를 찾고 있어요</div>
+                <div style={{ fontSize: 12.5, color: '#9aa0a6', marginTop: 5 }}>산업군 + 상황이 모두 맞는 상대를 우선 연결합니다</div>
+              </div>
+              <span onClick={cancelMatch} style={{ marginTop: 6, padding: '9px 22px', border: '1px solid #dadce0', color: '#5f6368', borderRadius: 20, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>
+                매칭 취소
+              </span>
             </div>
+          )}
+
+          {/* ── CHATTING body: messages ── */}
+          {phase === 'chatting' && (
+            <div style={{ padding: '12px 18px 14px' }}>
+              {/* Partner info + timer + end button */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 11 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34a06b', display: 'inline-block', animation: 'livePulse 1.8s infinite' }} />
+                  <span style={{ fontSize: 12, color: '#5f6368' }}>
+                    <b style={{ color: '#3c4043', fontWeight: 600 }}>{partnerNickname}</b>
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: chatTimeLeft <= 60 ? '#ea4c4c' : '#5f6368', fontWeight: 600 }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="9" stroke={chatTimeLeft <= 60 ? '#ea4c4c' : '#5f6368'} strokeWidth="2" />
+                      <path d="M12 7v5l3 2" stroke={chatTimeLeft <= 60 ? '#ea4c4c' : '#5f6368'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {fmtTimer(chatTimeLeft)} 남음
+                  </span>
+                  <span onClick={endChat} style={{ border: '1px solid #f3c0bb', background: '#fef6f5', color: '#c5221f', borderRadius: 14, padding: '4px 13px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    채팅 종료
+                  </span>
+                </div>
+              </div>
+
+              {/* Message list — Google search history style */}
+              <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {messages.length === 0 && (
+                  <div style={{ padding: '20px 0', textAlign: 'center', fontSize: 13, color: '#bdc1c6' }}>대화를 시작해보세요</div>
+                )}
+                {messages.map(msg => (
+                  <div
+                    key={msg.messageId}
+                    style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 16px', borderRadius: 8, background: msg.isMine ? 'transparent' : '#f8f9fa' }}
+                  >
+                    <ClockIcon stroke={msg.isMine ? '#3b7ff2' : '#9aa0a6'} />
+                    <span style={{ flex: 1, fontSize: 15, color: '#202124' }}>{msg.content}</span>
+                  </div>
+                ))}
+                <div ref={chatEndRef} />
+              </div>
+            </div>
+          )}
+
+          <div style={s.sep} />
+
+          {/* Footer hint */}
+          <div style={s.hintRow}>
+            <span style={s.hintText}>
+              {phase === 'search'    && '상황을 고르면 같은 업계의 익명의 동료와 매칭돼요'}
+              {phase === 'matching'  && '상대가 없으면 대기 상태가 유지돼요'}
+              {phase === 'chatting'  && '10분이 지나면 대화는 자동으로 종료돼요'}
+            </span>
+            <span style={s.hintText}>
+              {phase === 'search'    && 'Enter 매칭 · ESC 취소'}
+              {phase === 'matching'  && 'ESC 취소'}
+              {phase === 'chatting'  && 'Enter 전송 · ⚑ 신고'}
+            </span>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* ── RESUME MODAL (A4) ── */}
+      {/* ── Google-style footer ── */}
+      <div style={s.footer}>
+        <span style={{ fontSize: 13, color: '#70757a' }}>대한민국</span>
+        <div style={{ display: 'flex', gap: 22 }}>
+          {['정보', '약관', '설정'].map(t => (
+            <span key={t} style={{ fontSize: 13, color: '#70757a', cursor: 'pointer' }}>{t}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Resume modal (A4) ── */}
       {showResume && (
-        <div
-          className="fixed inset-0 flex items-center justify-center z-50"
-          style={{ background: 'rgba(0,0,0,0.35)' }}
-        >
-          <div style={{ width: 340, background: '#fff', borderRadius: 16, padding: '28px 24px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
-            <div style={{ fontSize: 17, fontWeight: 600, color: '#202124', marginBottom: 8 }}>
-              진행 중인 대화가 있어요
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(32,33,36,.38)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          <div style={{ width: 380, background: '#fff', borderRadius: 16, boxShadow: '0 16px 48px rgba(0,0,0,.32)', padding: '28px 28px 24px' }}>
+            <div style={{ fontSize: 18, color: '#202124', fontWeight: 600 }}>진행 중인 대화가 있어요</div>
+            <div style={{ fontSize: 13.5, color: '#5f6368', lineHeight: 1.6, marginTop: 10 }}>
+              이전 대화가 아직 열려 있어요. 이어서 대화할까요, 아니면 종료할까요?
             </div>
-            <div style={{ fontSize: 13.5, color: '#5f6368', marginBottom: 24, lineHeight: 1.6 }}>
-              이전 대화를 종료하고 새로운 매칭을 시작할까요?
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '16px 0 22px', fontSize: 12.5, color: '#ea4c4c', fontWeight: 600 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="#ea4c4c" strokeWidth="2" />
+                <path d="M12 7v5l3 2" stroke="#ea4c4c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              시간이 지나면 자동 종료
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={() => {
-                  setShowResume(false);
-                  endChat();
-                  setTimeout(() => doStartMatch(), 50);
-                }}
-                style={{ flex: 1, height: 42, background: '#fce8e6', color: '#ea4c4c', borderRadius: 10, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer' }}
+              <div
+                onClick={() => { setShowResume(false); endChat(); setTimeout(() => doStartMatch(), 50); }}
+                style={{ flex: 1, textAlign: 'center', border: '1px solid #f3c0bb', background: '#fef6f5', color: '#c5221f', borderRadius: 9, padding: '12px 0', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
               >
                 대화 종료
-              </button>
-              <button
-                onClick={() => {
-                  setShowResume(false);
-                  const roomId = chatRoomIdRef.current;
-                  if (roomId) enterChat(roomId);
-                }}
-                style={{ flex: 1, height: 42, background: '#3b7ff2', color: '#fff', borderRadius: 10, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer' }}
+              </div>
+              <div
+                onClick={() => { setShowResume(false); const r = chatRoomIdRef.current; if (r) enterChat(r); }}
+                style={{ flex: 1.4, textAlign: 'center', background: '#3b7ff2', color: '#fff', borderRadius: 9, padding: '12px 0', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
               >
                 이어서 대화하기
-              </button>
+              </div>
             </div>
           </div>
         </div>

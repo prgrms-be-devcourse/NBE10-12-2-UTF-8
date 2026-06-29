@@ -15,12 +15,16 @@ const INDUSTRIES = [
   { name: '사무업',        color: '#34a06b' },
 ];
 
-function BisilLogo({ size = 34 }: { size?: number }) {
+const LOGO_CHARS = [
+  { c: 'T', color: '#3b7ff2' }, { c: 'a', color: '#ea4c4c' }, { c: 'n', color: '#f5b400' },
+  { c: 'g', color: '#3b7ff2' }, { c: 'b', color: '#34a06b' }, { c: 'i', color: '#ea4c4c' },
+  { c: 's', color: '#f5b400' }, { c: 'i', color: '#3b7ff2' }, { c: 'l', color: '#34a06b' },
+];
+function TangbisilLogo({ size = 34 }: { size?: number }) {
+  const ls = size >= 35 ? '-1.2px' : '-0.8px';
   return (
-    <span style={{ fontFamily: "'Baloo 2', sans-serif", fontSize: size, fontWeight: 700, lineHeight: 1, letterSpacing: '-1px', userSelect: 'none' }}>
-      <span style={{ color: '#3b7ff2' }}>B</span><span style={{ color: '#ea4c4c' }}>i</span>
-      <span style={{ color: '#f5b400' }}>s</span><span style={{ color: '#3b7ff2' }}>i</span>
-      <span style={{ color: '#34a06b' }}>l</span>
+    <span style={{ fontFamily: "var(--font-baloo2), 'Baloo 2', sans-serif", fontSize: size, fontWeight: 700, lineHeight: 1, letterSpacing: ls, userSelect: 'none' }}>
+      {LOGO_CHARS.map(({ c, color }, i) => <span key={i} style={{ color }}>{c}</span>)}
     </span>
   );
 }
@@ -53,7 +57,7 @@ export default function SignupPage() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#fff', fontFamily: "Arial, 'Helvetica Neue', sans-serif", padding: '34px 0 30px', overflowY: 'auto' }}>
-      <BisilLogo size={34} />
+      <TangbisilLogo size={34} />
       <div style={{ fontSize: 20, color: '#202124', fontWeight: 500, marginBottom: 4, marginTop: 6 }}>계정 만들기</div>
       <div style={{ fontSize: 13, color: '#5f6368', marginBottom: 24 }}>실명·회사명·연락처는 받지 않아요. 익명으로 시작합니다</div>
 
