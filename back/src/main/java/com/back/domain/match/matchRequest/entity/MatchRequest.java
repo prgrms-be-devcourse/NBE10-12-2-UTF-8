@@ -1,6 +1,7 @@
 package com.back.domain.match.matchRequest.entity;
 
 import com.back.domain.member.member.entity.Member;
+import com.back.global.jpa.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,7 +12,7 @@ import java.util.UUID;
 @Entity
 @Getter
 @NoArgsConstructor
-public class MatchRequest {
+public class MatchRequest extends BaseEntity {
 
     @Id
     private UUID matchRequestId;
