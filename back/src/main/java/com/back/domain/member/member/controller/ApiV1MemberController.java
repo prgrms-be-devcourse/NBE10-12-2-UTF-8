@@ -55,7 +55,6 @@ public class ApiV1MemberController {
             String refreshToken,
             int accessTokenExpiresIn
     ) {}
-
     @PostMapping("/signup")
     @Transactional
     @Operation(summary = "회원가입")
