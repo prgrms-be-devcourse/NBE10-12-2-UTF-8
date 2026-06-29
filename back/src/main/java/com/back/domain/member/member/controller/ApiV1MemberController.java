@@ -107,15 +107,22 @@ public class ApiV1MemberController {
                 "로그아웃 생성 성공"
         );
     }
+    public record MemberMeRes(
+            String email,
+            String industry
+    ) {}
 
-//    @GetMapping("/me")
-//    @Transactional
-//    @Operation(summary = "내정보")
-//    public MemberWithUsernameDto me() {
-//
-//        Member actor = memberService.findById(rq.getActor().getId()).get();
-//
-//        return new MemberWithUsernameDto(actor);
-//
-//    }
+    @GetMapping("/me")
+    @Transactional(readOnly = true)
+    @Operation(summary = "내 정보 조회")
+    public RsData<MemberMeRes> me() {
+        Member actor = memberService.findById(rq.getActor().getId())
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
+
+        return new RsData<>(
+                "200-1",
+                "내 정보 조회 성공",
+                new MemberMeRes(actor.getEmail(), actor.getIndustry())
+        );
+    }
 }
