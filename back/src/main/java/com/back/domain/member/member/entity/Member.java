@@ -18,57 +18,39 @@ import java.util.UUID;
 @NoArgsConstructor
 public class Member extends BaseEntity {
     @Column(unique = true)
-    private String username;
+    private String email;
     private String password;
-    private String nickname;
+    private String industry;
+    private String role; // "USER", "ADMIN"
+    private boolean isSuspended;
     @Column(unique = true)
-    private String apiKey;
+    private UUID refreshToken;
 
-    public Member(int id, String username, String name) {
+    public Member(UUID id, String email, String role) {
         setId(id);
-        this.username = username;
-        setName(name);
+        this.email = email;
+        this.role = role;
     }
 
-    public Member(String username, String password, String nickname) {
-        this.username = username;
+    public Member(String email, String password, String industry, String role) {
+        this.email = email;
         this.password = password;
-        this.nickname = nickname;
-        this.apiKey = UUID.randomUUID().toString();
+        this.industry = industry;
+        this.role = role;
+        this.isSuspended = false;
     }
 
-    public String getName() {
-        return nickname;
-    }
-
-    public void setName(String name) {
-        this.nickname = name;
-    }
-
-    public void modifyApiKey(String apiKey) {
-        this.apiKey = apiKey;
+    public void updateRefreshToken(UUID refreshToken) {
+        this.refreshToken = refreshToken;
     }
 
     public boolean isAdmin() {
-        if ("system".equals(username)) return true;
-        if ("admin".equals(username)) return true;
-
-        return false;
+        return "ADMIN".equals(role);
     }
 
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return getAuthoritiesAsStringList()
-                .stream()
-                .map(SimpleGrantedAuthority::new)
-                .toList();
-    }
-
-    private List<String> getAuthoritiesAsStringList() {
-        List<String> authorities = new ArrayList<>();
-
-        if (isAdmin())
-            authorities.add("ROLE_ADMIN");
-
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + this.role));
         return authorities;
     }
 }

@@ -39,7 +39,7 @@ public class SecurityConfig {
                                 ).permitAll()
                                 .requestMatchers(
                                         HttpMethod.POST,
-                                        "/api/*/members"
+                                        "/api/*/members/signup"
                                 ).permitAll()
                                 .requestMatchers("/api/*/adm/**").hasRole("ADMIN")
                                 .requestMatchers("/api/*/**").authenticated()

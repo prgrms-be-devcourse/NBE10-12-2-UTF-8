@@ -2,27 +2,21 @@ package com.back.domain.member.member.dto;
 
 import com.back.domain.member.member.entity.Member;
 
-import java.time.LocalDateTime;
-
 public record MemberDto(
-        int id,
-        LocalDateTime createDate,
-        LocalDateTime modifyDate,
-        String name
+        String id,
+        String email,
+        String industry
 ) {
-    public MemberDto(int id, LocalDateTime createDate, LocalDateTime modifyDate, String name) {
+    public MemberDto(String id, String email, String industry) {
         this.id = id;
-        this.createDate = createDate;
-        this.modifyDate = modifyDate;
-        this.name = name;
+        this.email = email;
+        this.industry = industry;
     }
-
     public MemberDto(Member member) {
         this(
-                member.getId(),
-                member.getCreateDate(),
-                member.getModifyDate(),
-                member.getName()
+                String.valueOf(member.getId()),
+                member.getEmail(),
+                member.getIndustry()
         );
     }
 }

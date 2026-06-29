@@ -5,20 +5,18 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 
 import java.util.Collection;
+import java.util.UUID;
 
 @Getter
 public class SecurityUser extends User {
-    private final int id;
-    private final String name;
+    private final UUID id;
 
     public SecurityUser(
-            int id,
-            String username,
-            String name,
+            UUID id,
+            String email,
             Collection<? extends GrantedAuthority> authorities
     ) {
-        super(username, "", authorities); // 우리의 시나리오(REST API)에서는 이 객체의 비밀번호 필드를 활용할 일이 없다.
+        super(email, "", authorities);
         this.id = id;
-        this.name = name;
     }
 }
