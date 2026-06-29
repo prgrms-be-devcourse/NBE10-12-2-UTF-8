@@ -24,10 +24,10 @@ public abstract class BaseEntity {
     private UUID id;
 
     @CreatedDate
-    private LocalDateTime createDate;
+    private LocalDateTime createdAt;
 
     @LastModifiedDate
-    private LocalDateTime modifyDate;
+    private LocalDateTime modifiedAt;
 
     @Override
     public boolean equals(Object o) {
