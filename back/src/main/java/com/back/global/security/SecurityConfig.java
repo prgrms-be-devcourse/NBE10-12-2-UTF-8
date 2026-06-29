@@ -27,15 +27,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         auth -> auth
                                 .requestMatchers(
-                                        HttpMethod.GET,
-                                        "/api/*/posts",
-                                        "/api/*/posts/{id:\\d+}",
-                                        "/api/*/posts/{postId:\\d+}/comments",
-                                        "/api/*/posts/{postId:\\d+}/comments/{id:\\d+}"
-                                ).permitAll()
-                                .requestMatchers(
-                                        "/api/*/members/login",
-                                        "/api/*/members/logout"
+                                        "/api/*/members/login"
                                 ).permitAll()
                                 .requestMatchers(
                                         HttpMethod.POST,
@@ -62,7 +54,6 @@ public class SecurityConfig {
                                 .authenticationEntryPoint(
                                         (request, response, authException) -> {
                                             response.setContentType("application/json;charset=UTF-8");
-
                                             response.setStatus(401);
                                             response.getWriter().write(
                                                     Ut.json.toString(
@@ -77,7 +68,6 @@ public class SecurityConfig {
                                 .accessDeniedHandler(
                                         (request, response, accessDeniedException) -> {
                                             response.setContentType("application/json;charset=UTF-8");
-
                                             response.setStatus(403);
                                             response.getWriter().write(
                                                     Ut.json.toString(
@@ -93,24 +83,17 @@ public class SecurityConfig {
 
         return http.build();
     }
+
     @Bean
     public UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
-        // 허용할 오리진 설정
         configuration.setAllowedOrigins(List.of("https://cdpn.io", "http://localhost:3000"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
-
-        // 자격 증명 허용 설정
         configuration.setAllowCredentials(true);
-
-        // 허용할 헤더 설정
         configuration.setAllowedHeaders(List.of("*"));
 
-        // CORS 설정을 소스에 등록
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", configuration);
-
         return source;
     }
 }

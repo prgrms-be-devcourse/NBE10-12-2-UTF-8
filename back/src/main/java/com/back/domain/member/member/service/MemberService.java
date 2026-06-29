@@ -59,4 +59,9 @@ public class MemberService {
     public Optional<Member> findById(UUID id) {
         return memberRepository.findById(id);
     }
+    public void clearRefreshToken(Member member) {
+        Member findMember = memberRepository.findById(member.getId())
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
+        findMember.updateRefreshToken(null);
+    }
 }
