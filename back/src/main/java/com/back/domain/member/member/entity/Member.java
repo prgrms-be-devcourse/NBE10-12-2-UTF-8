@@ -53,4 +53,7 @@ public class Member extends BaseEntity {
         authorities.add(new SimpleGrantedAuthority("ROLE_" + this.role));
         return authorities;
     }
+    public void updateIndustry(String industry) {
+        this.industry = industry;
+    }
 }
