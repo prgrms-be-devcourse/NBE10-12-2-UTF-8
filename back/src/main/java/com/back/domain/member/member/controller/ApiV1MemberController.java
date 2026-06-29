@@ -119,4 +119,27 @@ public class ApiV1MemberController {
                 new MemberMeRes(actor.getEmail(), actor.getIndustry())
         );
     }
+    public record MemberUpdateIndustryReq(
+            @NotBlank
+            String industry
+    ) {}
+
+    public record MemberUpdateIndustryRes(
+            String industry
+    ) {}
+
+    @PatchMapping("/me")
+    @Operation(summary = "산업군 수정")
+    public RsData<MemberUpdateIndustryRes> updateIndustry(
+            @Valid @RequestBody MemberUpdateIndustryReq req
+    ) {
+        Member actor = rq.getActor();
+        memberService.updateIndustry(actor, req.industry());
+
+        return new RsData<>(
+                "200-1",
+                "소속 산업군 수정 성공",
+                new MemberUpdateIndustryRes(req.industry())
+        );
+    }
 }
