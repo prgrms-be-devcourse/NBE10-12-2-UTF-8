@@ -28,7 +28,7 @@ public class MatchRequest extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private MatchStatus status;
 
-    private LocalDateTime requestdAt;
+    private LocalDateTime requestedAt;
 
     public MatchRequest(Member member, ChatRoom room, String industry, String situation) {
         this.member = member;
@@ -36,6 +36,6 @@ public class MatchRequest extends BaseEntity {
         this.industry = industry;
         this.situation = situation;
         this.status = MatchStatus.PENDING;
-        this.requestdAt =requestdAt;
+        this.requestedAt = LocalDateTime.now();
     }
 }
