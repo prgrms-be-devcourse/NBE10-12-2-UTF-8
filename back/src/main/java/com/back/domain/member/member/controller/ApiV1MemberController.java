@@ -94,6 +94,20 @@ public class ApiV1MemberController {
         );
     }
 
+    @PostMapping("/logout")
+    @Transactional
+    @Operation(summary = "로그아웃")
+    public RsData<Void> logout() {
+        Member actor = rq.getActor();
+        memberService.clearRefreshToken(actor);
+        rq.deleteCookie("accessToken");
+
+        return new RsData<>(
+                "200-1",
+                "로그아웃 생성 성공"
+        );
+    }
+
 //    @GetMapping("/me")
 //    @Transactional
 //    @Operation(summary = "내정보")
@@ -104,18 +118,4 @@ public class ApiV1MemberController {
 //        return new MemberWithUsernameDto(actor);
 //
 //    }
-//
-//    @DeleteMapping("/logout")
-//    @Operation(summary = "로그아웃")
-//    public RsData<Void> logout() {
-//        rq.deleteCookie("apiKey");
-//
-//        rq.deleteCookie("accessToken");
-//
-//        return new RsData<>(
-//                "200-1",
-//                "로그아웃 되었습니다."
-//        );
-//    }
-
 }
