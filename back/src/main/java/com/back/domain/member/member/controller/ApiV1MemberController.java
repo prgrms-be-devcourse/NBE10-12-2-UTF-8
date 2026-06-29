@@ -13,7 +13,6 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -57,7 +56,6 @@ public class ApiV1MemberController {
     ) {}
 
     @PostMapping("/signup")
-    @Transactional
     @Operation(summary = "회원가입")
     public RsData<MemberDto> signup(@Valid @RequestBody MemberSignupReq req) {
         Member member = memberService.join(req.email(), req.password(), req.industry(), "USER");
@@ -69,7 +67,6 @@ public class ApiV1MemberController {
     }
 
     @PostMapping("/login")
-    @Transactional
     @Operation(summary = "로그인")
     public RsData<MemberLoginRes> login(@Valid @RequestBody MemberLoginReq req) {
         Member member = memberService.findByEmail(req.email())
@@ -95,7 +92,6 @@ public class ApiV1MemberController {
     }
 
     @PostMapping("/logout")
-    @Transactional
     @Operation(summary = "로그아웃")
     public RsData<Void> logout() {
         Member actor = rq.getActor();
@@ -113,7 +109,6 @@ public class ApiV1MemberController {
     ) {}
 
     @GetMapping("/me")
-    @Transactional(readOnly = true)
     @Operation(summary = "내 정보 조회")
     public RsData<MemberMeRes> me() {
         Member actor = memberService.findById(rq.getActor().getId())

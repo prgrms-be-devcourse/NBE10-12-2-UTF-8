@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.Optional;
@@ -15,6 +16,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class MemberService {
     private final AuthTokenService authTokenService;
     private final PasswordEncoder passwordEncoder;
@@ -24,6 +26,7 @@ public class MemberService {
         return memberRepository.count();
     }
 
+    @Transactional
     public Member join(String email, String password, String industry, String role) {
         findByEmail(email).ifPresent(_ -> {
             throw new ServiceException("409-1", "이미 존재하는 이메일입니다.");
@@ -48,6 +51,7 @@ public class MemberService {
         return authTokenService.genAccessToken(member);
     }
 
+    @Transactional
     public UUID genRefreshToken(Member member) {
         UUID token = UUID.randomUUID();
         member.updateRefreshToken(token);
@@ -61,6 +65,8 @@ public class MemberService {
     public Optional<Member> findById(UUID id) {
         return memberRepository.findById(id);
     }
+
+    @Transactional
     public void clearRefreshToken(Member member) {
         Member findMember = memberRepository.findById(member.getId())
                 .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
