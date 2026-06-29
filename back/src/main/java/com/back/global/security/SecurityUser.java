@@ -5,13 +5,14 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 
 import java.util.Collection;
+import java.util.UUID;
 
 @Getter
 public class SecurityUser extends User {
-    private final int id;
+    private final UUID id;
 
     public SecurityUser(
-            int id,
+            UUID id,
             String email,
             Collection<? extends GrantedAuthority> authorities
     ) {

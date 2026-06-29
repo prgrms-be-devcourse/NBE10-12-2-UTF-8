@@ -11,6 +11,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -22,10 +23,10 @@ public class Member extends BaseEntity {
     private String industry;
     private String role; // "USER", "ADMIN"
     private boolean isSuspended;
-    private String refreshToken;
+    @Column(unique = true)
+    private UUID refreshToken;
 
-    // 인증/인가 시 사용하는 결합용 생성자
-    public Member(int id, String email, String role) {
+    public Member(UUID id, String email, String role) {
         setId(id);
         this.email = email;
         this.role = role;
@@ -39,7 +40,7 @@ public class Member extends BaseEntity {
         this.isSuspended = false;
     }
 
-    public void updateRefreshToken(String refreshToken) {
+    public void updateRefreshToken(UUID refreshToken) {
         this.refreshToken = refreshToken;
     }
 

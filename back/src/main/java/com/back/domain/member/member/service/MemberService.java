@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,8 +46,8 @@ public class MemberService {
         return authTokenService.genAccessToken(member);
     }
 
-    public String genRefreshToken(Member member) {
-        String token = UUID.randomUUID().toString();
+    public UUID genRefreshToken(Member member) {
+        UUID token = UUID.randomUUID();
         member.updateRefreshToken(token);
         return token;
     }
@@ -57,7 +56,7 @@ public class MemberService {
         return authTokenService.payload(accessToken);
     }
 
-    public Optional<Member> findById(int id) {
+    public Optional<Member> findById(UUID id) {
         return memberRepository.findById(id);
     }
 }

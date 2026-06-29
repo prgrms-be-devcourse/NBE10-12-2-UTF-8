@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class AuthTokenService {
@@ -16,7 +17,7 @@ public class AuthTokenService {
     private String secret;
 
     public String genAccessToken(Member member) {
-        long id = member.getId();
+        String id = member.getId().toString();
         String email = member.getEmail();
         String role = member.getRole();
 
@@ -32,7 +33,7 @@ public class AuthTokenService {
 
         if (parsedPayload == null) return null;
 
-        int id = (int) parsedPayload.get("id");
+        UUID id = UUID.fromString((String) parsedPayload.get("id"));
         String email = (String) parsedPayload.get("email");
         String role = (String) parsedPayload.get("role");
 

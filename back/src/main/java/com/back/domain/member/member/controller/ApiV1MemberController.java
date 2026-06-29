@@ -15,6 +15,9 @@ import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/members")
 @RequiredArgsConstructor
@@ -23,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
 public class ApiV1MemberController {
     private final MemberService memberService;
     private final Rq rq;
-    // --- 요청 DTO (기존 양식 유지 - 내부 레코드) ---
+
     public record MemberSignupReq(
             @NotBlank
             @Email
@@ -45,14 +48,14 @@ public class ApiV1MemberController {
             @Size(min = 4, max = 30)
             String password
     ) {}
-    // --- 로그인 응답 DTO (기존 양식 유지 - 내부 레코드) ---
+
     public record MemberLoginRes(
             String grantType,
             String accessToken,
             String refreshToken,
             int accessTokenExpiresIn
     ) {}
-    // --- Endpoints ---
+
     @PostMapping("/signup")
     @Transactional
     @Operation(summary = "회원가입")
@@ -64,23 +67,28 @@ public class ApiV1MemberController {
                 new MemberDto(member) // dto 패키지의 MemberDto 활용
         );
     }
+
     @PostMapping("/login")
     @Transactional
     @Operation(summary = "로그인")
     public RsData<MemberLoginRes> login(@Valid @RequestBody MemberLoginReq req) {
         Member member = memberService.findByEmail(req.email())
                 .orElseThrow(() -> new ServiceException("401-1", "존재하지 않는 이메일입니다."));
+
         memberService.checkPassword(member, req.password());
+
         String accessToken = memberService.genAccessToken(member);
-        String refreshToken = memberService.genRefreshToken(member);
+        UUID refreshToken = memberService.genRefreshToken(member);
+
         rq.setCookie("accessToken", accessToken);
+
         return new RsData<>(
                 "200-1",
                 "로그인 생성 성공",
-                new MemberLoginRes( // 내부 정의한 MemberLoginRes 사용
+                new MemberLoginRes(
                         "Bearer",
                         accessToken,
-                        refreshToken,
+                        refreshToken.toString(),
                         3600
                 )
         );

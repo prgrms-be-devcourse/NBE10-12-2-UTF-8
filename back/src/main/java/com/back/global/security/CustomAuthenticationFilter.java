@@ -21,6 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -48,7 +49,6 @@ public class CustomAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 가입/로그인만 화이트리스트 적용
         if (List.of("/api/v1/members/login", "/api/v1/members/signup").contains(request.getRequestURI())) {
             filterChain.doFilter(request, response);
             return;
@@ -78,7 +78,7 @@ public class CustomAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        int id = (int) payload.get("id");
+        UUID id = (UUID) payload.get("id");
         String email = (String) payload.get("email");
         String role = (String) payload.get("role");
         Member member = new Member(id, email, role);

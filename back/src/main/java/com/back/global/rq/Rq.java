@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -30,7 +31,8 @@ public class Rq {
                 .map(principal -> (SecurityUser) principal)
                 .map(securityUser -> {
                     String role = securityUser.getAuthorities().stream()
-                            .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                            .map(GrantedAuthority::getAuthority)
+                            .map(auth -> auth.replace("ROLE_", ""))
                             .findFirst()
                             .orElse("USER");
                     return new Member(securityUser.getId(), securityUser.getUsername(), role);
