@@ -56,8 +56,7 @@ public class ApiV1MatchController {
             return new RsData<>(
                     "200-1",
                     "매칭 성공",
-                    MatchResponseDto.ofMatched(
-                    matchRequest.getRoom() != null ? matchRequest.getRoom().getId() : null)//임시로 null허용
+                    MatchResponseDto.ofMatched(matchRequest.getRoom().getId())
             );
         }
 

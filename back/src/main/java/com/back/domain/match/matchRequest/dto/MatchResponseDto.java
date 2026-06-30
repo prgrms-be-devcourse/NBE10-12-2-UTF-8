@@ -24,12 +24,7 @@ public record MatchResponseDto(
     }
 
     public static MatchResponseDto ofMatched(UUID chatRoomId) {
-        return new MatchResponseDto(
-                null,
-                MatchStatus.MATCHED,
-                null,
-                chatRoomId != null ? chatRoomId.toString() : null  // null 체크 추가
-        );
+        return new MatchResponseDto(null, MatchStatus.MATCHED, null, chatRoomId.toString());
     }
 
     public static MatchResponseDto ofPending() {
