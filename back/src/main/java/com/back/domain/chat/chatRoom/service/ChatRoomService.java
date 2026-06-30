@@ -3,10 +3,12 @@ package com.back.domain.chat.chatRoom.service;
 import com.back.domain.chat.chatRoom.entity.ChatRoom;
 import com.back.domain.chat.chatRoom.repository.ChatRoomRepository;
 import com.back.global.exception.ServiceException;
+import com.back.domain.member.member.entity.Member;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -19,5 +21,10 @@ public class ChatRoomService {
     public ChatRoom getChatRoom(UUID roomId) {
         return chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new ServiceException("404-1", "채팅방을 찾을 수 없습니다."));
+    }
+
+    @Transactional
+    public ChatRoom createChatRoom(List<Member> members) {
+        return null;
     }
 }
