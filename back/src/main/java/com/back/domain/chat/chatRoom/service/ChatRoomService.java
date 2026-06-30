@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -48,5 +49,9 @@ public class ChatRoomService {
         chatRoom.close();
 
         return chatRoom;
+    }
+
+    public Optional<ChatRoom> findActiveChatRoom(Member actor) {
+        return chatRoomParticipantService.findActiveChatRoomByMember(actor);
     }
 }
