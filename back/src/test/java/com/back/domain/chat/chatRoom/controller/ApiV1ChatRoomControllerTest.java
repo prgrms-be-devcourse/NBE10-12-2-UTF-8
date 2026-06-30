@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -124,5 +125,116 @@ public class ApiV1ChatRoomControllerTest {
                 .andExpect(status().isForbidden()) // 403 Forbidden
                 .andExpect(jsonPath("$.resultCode").value("403-1"))
                 .andExpect(jsonPath("$.msg").value("접근 권한이 없습니다."));
+    }
+
+    @Test
+    @DisplayName("채팅방 종료 성공")
+    void t4() throws Exception {
+        // Given
+        Member member = memberService.join("closeuser1@test.com", "1234", "IT", "USER");
+        String accessToken = memberService.genAccessToken(member);
+
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        UUID roomId = chatRoom.getId();
+
+        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, member, "익명의 동료"));
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        delete("/api/v1/rooms/" + roomId)
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("채팅방 삭제 성공"))
+                .andExpect(jsonPath("$.data.roomId").value(roomId.toString()))
+                .andExpect(jsonPath("$.data.status").value("CLOSED"))
+                .andExpect(jsonPath("$.data.maxParticipants").value(2))
+                .andExpect(jsonPath("$.data.createdAt").exists())
+                .andExpect(jsonPath("$.data.closedAt").exists());
+    }
+
+    @Test
+    @DisplayName("참여하지 않은 채팅방 종료 시 실패")
+    void t5() throws Exception {
+        // Given
+        Member member = memberService.join("closeuser2@test.com", "1234", "IT", "USER");
+        String accessToken = memberService.genAccessToken(member);
+
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        UUID roomId = chatRoom.getId();
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        delete("/api/v1/rooms/" + roomId)
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isForbidden()) // 403 Forbidden
+                .andExpect(jsonPath("$.resultCode").value("403-1"))
+                .andExpect(jsonPath("$.msg").value("접근 권한이 없습니다."));
+    }
+
+    @Test
+    @DisplayName("이미 종료된 채팅방 종료 시 실패")
+    void t6() throws Exception {
+        // Given
+        Member member = memberService.join("closeuser3@test.com", "1234", "IT", "USER");
+        String accessToken = memberService.genAccessToken(member);
+
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.CLOSED, 2));
+        UUID roomId = chatRoom.getId();
+
+        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, member, "익명의 동료"));
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        delete("/api/v1/rooms/" + roomId)
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isConflict()) // 409 Conflict
+                .andExpect(jsonPath("$.resultCode").value("409-1"))
+                .andExpect(jsonPath("$.msg").value("이미 종료된 채팅방입니다."));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 채팅방 종료 시 실패")
+    void t7() throws Exception {
+        // Given
+        Member member = memberService.join("closeuser4@test.com", "1234", "IT", "USER");
+        String accessToken = memberService.genAccessToken(member);
+        UUID nonexistentRoomId = UUID.randomUUID();
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        delete("/api/v1/rooms/" + nonexistentRoomId)
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isNotFound()) // 404 Not Found
+                .andExpect(jsonPath("$.resultCode").value("404-1"))
+                .andExpect(jsonPath("$.msg").value("채팅방을 찾을 수 없습니다."));
     }
 }
