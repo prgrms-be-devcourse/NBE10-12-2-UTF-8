@@ -31,4 +31,9 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
             @Param("end") LocalDateTime end,
             @Param("status") MatchStatus status
     );
+
+    @Query("SELECT r FROM MatchRequest r WHERE r.status = :status AND r.requestedAt < :expiredBefore")
+    List<MatchRequest> findExpiredPending(
+            @Param("status") MatchStatus status,
+            @Param("expiredBefore") LocalDateTime expiredBefore);
 }
