@@ -18,12 +18,13 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class ChatMessageService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomParticipantRepository chatRoomParticipantRepository;
     private final ChatMessageRepository chatMessageRepository;
 
+    @Transactional
     public ChatRoomMessageResponseDto sendMessage(UUID roomId, Member sender, String content) {
         // 메시지 내용 입력 여부 검증
         if (content == null || content.isBlank()) {
