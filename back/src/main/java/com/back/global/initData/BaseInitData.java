@@ -33,12 +33,11 @@ public class BaseInitData {
         AppConfig.isDev();
 
         // 시스템 및 관리자 계정 생성 (이메일 및 어드민 권한 매개변수 적용)
-        memberService.join("system@test.com", "1234", "SYSTEM", "ADMIN");
-        memberService.join("admin@test.com", "1234", "ADMIN", "ADMIN");
+        memberService.join("admin@test.com", "1234", "관리자", "ADMIN");
 
         // 일반 유저 초기화 (이메일, 비밀번호, 업계코드, USER 권한 적용)
-        memberService.join("user1@test.com", "1234", "IT", "USER");
-        memberService.join("user2@test.com", "1234", "Finance", "USER");
-        memberService.join("user3@test.com", "1234", "Medical", "USER");
+        memberService.join("user1@test.com", "1234", "IT/개발", "USER");
+        memberService.join("user2@test.com", "1234", "사무업", "USER");
+        memberService.join("user3@test.com", "1234", "금융업", "USER");
     }
 }
