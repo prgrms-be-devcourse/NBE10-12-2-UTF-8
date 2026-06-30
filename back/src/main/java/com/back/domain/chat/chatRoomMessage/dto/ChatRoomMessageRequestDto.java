@@ -5,6 +5,5 @@ import lombok.Getter;
 
 @Getter
 public class ChatRoomMessageRequestDto {
-    @NotBlank
     private String content;
 }

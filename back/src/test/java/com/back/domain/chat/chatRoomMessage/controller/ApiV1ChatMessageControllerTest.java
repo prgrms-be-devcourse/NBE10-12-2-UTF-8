@@ -106,14 +106,14 @@ public class ApiV1ChatMessageControllerTest {
         resultActions
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.resultCode").value("401-1"))
-                .andExpect(jsonPath("$.msg").value("인증이 필요합니다."));
+                .andExpect(jsonPath("$.msg").value("로그인 후 이용해주세요."));
     }
 
     @Test
     @DisplayName("존재하지 않는 채팅방에 메시지 전송 시 실패")
     void t3() throws Exception {
         // Given
-        Member member = memberService.join("user3@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("user4@test.com", "1234", "IT", "USER");
         String accessToken = memberService.genAccessToken(member);
 
         UUID nonExistentRoomId = UUID.randomUUID();
@@ -168,7 +168,7 @@ public class ApiV1ChatMessageControllerTest {
 
         // Then
         resultActions
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.resultCode").value("409-1"))
                 .andExpect(jsonPath("$.msg").value("종료된 채팅방에는 메시지를 보낼 수 없습니다."));
     }

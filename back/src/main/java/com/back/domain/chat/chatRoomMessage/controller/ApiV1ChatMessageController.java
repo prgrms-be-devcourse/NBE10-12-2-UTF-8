@@ -1,0 +1,48 @@
+package com.back.domain.chat.chatRoomMessage.controller;
+
+import com.back.domain.chat.chatRoomMessage.dto.ChatRoomMessageRequestDto;
+import com.back.domain.chat.chatRoomMessage.dto.ChatRoomMessageResponseDto;
+import com.back.domain.chat.chatRoomMessage.service.ChatMessageService;
+import com.back.domain.member.member.entity.Member;
+import com.back.global.exception.ServiceException;
+import com.back.global.rq.Rq;
+import com.back.global.rsData.RsData;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/v1/rooms")
+@RequiredArgsConstructor
+@Tag(name = "ApiV1ChatMessageController", description = "API 채팅 메시지 컨트롤러")
+@SecurityRequirement(name = "bearerAuth")
+public class ApiV1ChatMessageController {
+
+    private final ChatMessageService chatMessageService;
+    private final Rq rq;
+
+    @PostMapping("/{roomId}/messages")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "메시지 전송")
+    public RsData<ChatRoomMessageResponseDto> sendMessage(
+            @PathVariable UUID roomId,
+            @RequestBody @Valid ChatRoomMessageRequestDto requestDto
+    ) {
+        Member actor = rq.getActor();
+        if (actor == null) {
+            throw new ServiceException("401-1", "인증이 필요합니다.");
+        }
+
+        ChatRoomMessageResponseDto responseDto = chatMessageService.sendMessage(
+                roomId, actor, requestDto.getContent()
+        );
+
+        return new RsData<>("201-1", "메시지 생성 성공", responseDto);
+    }
+}
