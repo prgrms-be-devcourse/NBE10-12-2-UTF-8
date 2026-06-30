@@ -87,14 +87,27 @@ export const apiCancelMatch = (matchRequestId: string) =>
   req<null>(`/api/v1/matches/${matchRequestId}`, { method: 'DELETE' });
 
 /* ── Chat ───────────────────────────────────────────────────────── */
+export type ChatRoom = {
+  roomId: string;
+  status: 'ACTIVE' | 'CLOSED';
+  maxParticipants: number;
+  createdAt: string;
+  closedAt?: string;
+};
+
 export const apiGetRoom = (roomId: string) =>
-  req<{ roomId: string; status: string; maxParticipants: number; createdAt: string }>(
-    `/api/v1/rooms/${roomId}`
-  );
+  req<ChatRoom>(`/api/v1/rooms/${roomId}`);
+
+// 로그인한 회원이 현재 참여 중인 활성 채팅방 조회. 없으면 data: null
+export const apiGetActiveRoom = () => req<ChatRoom | null>('/api/v1/rooms/active');
+
+// 채팅방 종료 (status -> CLOSED)
+export const apiCloseRoom = (roomId: string) =>
+  req<ChatRoom>(`/api/v1/rooms/${roomId}`, { method: 'PATCH' });
 
 export const apiSendMessage = (roomId: string, content: string) =>
   req<{ messageId: string; roomId: string; senderNickname: string; content: string; createdAt: string }>(
-    `/api/v1/rooms/${roomId}/message`,
+    `/api/v1/rooms/${roomId}/messages`,
     { method: 'POST', body: JSON.stringify({ content }) }
   );
 
@@ -106,10 +119,7 @@ export type ChatMsg = {
   isMine: boolean;
 };
 
-export const apiGetMessages = (roomId: string, after?: string) =>
-  req<ChatMsg[] | null>(
-    `/api/v1/rooms/${roomId}/message${after ? `?after=${encodeURIComponent(after)}` : ''}`
-  );
+// 백엔드에 메시지 조회(GET) 엔드포인트가 아직 없어 상대 메시지 폴링은 불가능 — 보낸 메시지만 로컬에 표시
 
 /* ── Admin ──────────────────────────────────────────────────────── */
 export type AdminMember = {
@@ -124,7 +134,7 @@ export const apiGetDashboard = () =>
   req<{
     matchStatistics: { totalMembers: number; todayMatches: number; activeChatRooms: number };
     industryStatistics: Array<{ industry: string; count: number }>;
-  }>('/api/v1/admin/dashboard');
+  }>('/api/v1/adm/dashboard');
 
 export const apiGetAdminMembers = (page = 0, size = 10) =>
   req<{

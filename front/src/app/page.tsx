@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
   apiCreateMatch, apiGetMatch, apiCancelMatch,
-  apiGetRoom, apiSendMessage, apiGetMessages,
+  apiGetRoom, apiGetActiveRoom, apiCloseRoom, apiSendMessage,
   apiGetMe, getToken, INDUSTRY_NAMES, type ChatMsg,
 } from '@/lib/api';
 
@@ -107,9 +107,7 @@ export default function HomePage() {
   const matchRequestIdRef = useRef<string | null>(null);
   const chatRoomIdRef     = useRef<string | null>(null);
   const seenMsgIds        = useRef<Set<string>>(new Set());
-  const lastMsgTimeRef    = useRef<string | undefined>(undefined);
   const matchPollRef      = useRef<ReturnType<typeof setInterval> | null>(null);
-  const msgPollRef        = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
   const chatTimerRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const chatEndRef        = useRef<HTMLDivElement>(null);
@@ -120,17 +118,18 @@ export default function HomePage() {
   }, []);
 
   const stopAll = useCallback(() => {
-    [matchPollRef, msgPollRef, elapsedTimerRef, chatTimerRef].forEach(r => {
+    [matchPollRef, elapsedTimerRef, chatTimerRef].forEach(r => {
       if (r.current) { clearInterval(r.current); r.current = null; }
     });
   }, []);
 
   const endChat = useCallback(() => {
     stopAll();
+    const roomId = chatRoomIdRef.current;
+    if (roomId) apiCloseRoom(roomId).catch(() => { /* ignore */ });
     chatRoomIdRef.current = null;
     matchRequestIdRef.current = null;
     seenMsgIds.current.clear();
-    lastMsgTimeRef.current = undefined;
     localStorage.removeItem(ROOM_KEY);
     setMessages([]);
     setInput('');
@@ -139,32 +138,14 @@ export default function HomePage() {
     setPhaseSync('search');
   }, [stopAll, setPhaseSync]);
 
-  const fetchMessages = useCallback(async () => {
-    const roomId = chatRoomIdRef.current;
-    if (!roomId || phaseRef.current !== 'chatting') return;
-    try {
-      const msgs = await apiGetMessages(roomId, lastMsgTimeRef.current);
-      if (!msgs || msgs.length === 0) return;
-      const newMsgs = msgs.filter(m => !seenMsgIds.current.has(m.messageId));
-      if (newMsgs.length === 0) return;
-      newMsgs.forEach(m => seenMsgIds.current.add(m.messageId));
-      lastMsgTimeRef.current = newMsgs[newMsgs.length - 1].createdAt;
-      setMessages(prev => [...prev, ...newMsgs]);
-    } catch { /* ignore */ }
-  }, []);
-
-  const startMsgPoll = useCallback(() => {
-    fetchMessages();
-    if (msgPollRef.current) clearInterval(msgPollRef.current);
-    msgPollRef.current = setInterval(fetchMessages, 2000);
-  }, [fetchMessages]);
-
+  // 백엔드에 메시지 조회(GET) API가 아직 없어 상대 메시지는 실시간으로 받을 수 없음 — 보낸 메시지만 표시
   const enterChat = useCallback(async (roomId: string) => {
     chatRoomIdRef.current = roomId;
     localStorage.setItem(ROOM_KEY, roomId);
     setPhaseSync('chatting');
     try {
       const room = await apiGetRoom(roomId);
+      if (room.status === 'CLOSED') { endChat(); return; }
       const endTime = new Date(room.createdAt).getTime() + 10 * 60 * 1000;
       const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
       if (remaining <= 0) { endChat(); return; }
@@ -182,8 +163,7 @@ export default function HomePage() {
         setChatTimeLeft(prev => { const n = prev - 1; if (n <= 0) { endChat(); return 0; } return n; });
       }, 1000);
     }
-    startMsgPoll();
-  }, [setPhaseSync, endChat, startMsgPoll]);
+  }, [setPhaseSync, endChat]);
 
   const startMatchPoll = useCallback((id: string) => {
     if (matchPollRef.current) clearInterval(matchPollRef.current);
@@ -248,7 +228,6 @@ export default function HomePage() {
           messageId: sent.messageId, senderNickname: sent.senderNickname,
           content: sent.content, createdAt: sent.createdAt, isMine: true,
         }]);
-        lastMsgTimeRef.current = sent.createdAt;
       }
     } catch (err) { console.error(err); }
   }, [input]);
@@ -261,8 +240,12 @@ export default function HomePage() {
       apiGetMe()
         .then(me => setUserIndustry(INDUSTRY_NAMES[me.industry] ?? me.industry))
         .catch(() => {});
-      const savedRoomId = localStorage.getItem(ROOM_KEY);
-      if (savedRoomId) { chatRoomIdRef.current = savedRoomId; setShowResume(true); }
+      apiGetActiveRoom()
+        .then(room => {
+          if (room) { chatRoomIdRef.current = room.roomId; setShowResume(true); }
+          else localStorage.removeItem(ROOM_KEY);
+        })
+        .catch(() => {});
     }
   }, []);
 
