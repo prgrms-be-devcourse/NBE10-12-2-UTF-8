@@ -1,4 +1,6 @@
 package com.back.domain.dashboard.dashboard.dto;
 
-public class IndustryStatisticsDto {
-}
+public record IndustryStatisticsDto(
+        String industry,
+        long count
+) {}

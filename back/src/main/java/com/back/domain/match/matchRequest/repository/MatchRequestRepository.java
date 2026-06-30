@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
 import java.util.UUID;
+import java.util.List;
 
 public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID> {
     boolean existsByMemberAndStatus(Member member, MatchStatus status);
@@ -19,7 +19,7 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
             @Param("situation") String situation,
             @Param("status") MatchStatus status);
 
-    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry AND r.status = :status")
+    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry  AND r.status = :status")
     List<MatchRequest> findPendingByIndustry(
             @Param("industry") String industry,
             @Param("status") MatchStatus status);

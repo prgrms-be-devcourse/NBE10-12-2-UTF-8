@@ -1,4 +1,9 @@
+// DashboardResponseDto.java
 package com.back.domain.dashboard.dashboard.dto;
 
-public class DashboardResponseDto {
-}
+import java.util.List;
+
+public record DashboardResponseDto(
+        MatchStatisticsDto matchStatistics,
+        List<IndustryStatisticsDto> industryStatistics
+) {}
