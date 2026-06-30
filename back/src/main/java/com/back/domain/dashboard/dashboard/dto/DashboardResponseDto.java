@@ -1,4 +1,3 @@
-// DashboardResponseDto.java
 package com.back.domain.dashboard.dashboard.dto;
 
 import java.util.List;
