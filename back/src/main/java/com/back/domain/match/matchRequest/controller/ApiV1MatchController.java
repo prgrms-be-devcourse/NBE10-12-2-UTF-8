@@ -56,8 +56,7 @@ public class ApiV1MatchController {
             return new RsData<>(
                     "200-1",
                     "매칭 성공",
-                    MatchResponseDto.ofMatched(
-                    matchRequest.getRoom() != null ? matchRequest.getRoom().getId() : null)//임시로 null허용
+                    MatchResponseDto.ofMatched(matchRequest.getRoom().getId())
             );
         }
 
@@ -67,6 +66,21 @@ public class ApiV1MatchController {
                 MatchResponseDto.ofPending()
         );
     }
+
+    @DeleteMapping("/{matchRequestId}")
+    @Operation(summary = "매칭 취소")
+    public RsData<Void> cancel(@PathVariable UUID matchRequestId) {
+        Member actor = rq.getActor();
+        MatchRequest matchRequest = matchRequestService.findById(matchRequestId);
+
+        matchRequestService.cancel(matchRequest, actor);
+
+        return new RsData<>(
+                "200-1",
+                "매칭 요청이 취소되었습니다."
+        );
+    }
+
 
 
 }

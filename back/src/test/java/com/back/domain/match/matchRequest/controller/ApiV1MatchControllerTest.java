@@ -333,4 +333,98 @@ public class ApiV1MatchControllerTest {
     }
 
 
+    @Test
+    @DisplayName("매칭 취소 성공")
+    void t10() throws Exception {
+        String accessToken = signupAndLogin("user1@test.com", "IT");
+
+        String createResponse = mvc.perform(
+                post("/api/v1/matches")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                "situation": "야근 중"
+                            }
+                            """)
+        ).andReturn().getResponse().getContentAsString();
+
+        String matchRequestId = new ObjectMapper()
+                .readTree(createResponse)
+                .path("data")
+                .path("matchRequestId")
+                .asText();
+
+        ResultActions resultActions = mvc.perform(
+                delete("/api/v1/matches/" + matchRequestId)
+                        .header("Authorization", "Bearer " + accessToken)
+        ).andDo(print());
+
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("매칭 요청이 취소되었습니다."));
+    }
+
+    @Test
+    @DisplayName("MATCHED 상태 매칭 취소 시 409")
+    void t11() throws Exception {
+        String accessToken1 = signupAndLogin("user1@test.com", "IT");
+        String accessToken2 = signupAndLogin("user2@test.com", "IT");
+
+        mvc.perform(
+                post("/api/v1/matches")
+                        .header("Authorization", "Bearer " + accessToken1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                "situation": "야근 중"
+                            }
+                            """)
+        );
+
+        String createResponse = mvc.perform(
+                post("/api/v1/matches")
+                        .header("Authorization", "Bearer " + accessToken2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                "situation": "야근 중"
+                            }
+                            """)
+        ).andReturn().getResponse().getContentAsString();
+
+        String matchRequestId = new ObjectMapper()
+                .readTree(createResponse)
+                .path("data")
+                .path("matchRequestId")
+                .asText();
+
+        ResultActions resultActions = mvc.perform(
+                delete("/api/v1/matches/" + matchRequestId)
+                        .header("Authorization", "Bearer " + accessToken2)
+        ).andDo(print());
+
+        resultActions
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.resultCode").value("409-1"))
+                .andExpect(jsonPath("$.msg").value("이미 매칭된 요청은 취소할 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 matchRequestId 취소 시 404")
+    void t12() throws Exception {
+        String accessToken = signupAndLogin("user1@test.com", "IT");
+
+        ResultActions resultActions = mvc.perform(
+                delete("/api/v1/matches/" + java.util.UUID.randomUUID())
+                        .header("Authorization", "Bearer " + accessToken)
+        ).andDo(print());
+
+        resultActions
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.resultCode").value("404-1"));
+    }
+
+
 }
