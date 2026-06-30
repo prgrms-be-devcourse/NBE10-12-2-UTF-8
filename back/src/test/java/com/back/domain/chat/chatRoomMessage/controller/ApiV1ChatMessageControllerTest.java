@@ -48,7 +48,7 @@ public class ApiV1ChatMessageControllerTest {
     @DisplayName("메시지 전송 성공")
     void t1() throws Exception {
         // Given
-        Member member = memberService.join("user1@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("user4@test.com", "1234", "IT", "USER");
         String accessToken = memberService.genAccessToken(member);
 
         ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
