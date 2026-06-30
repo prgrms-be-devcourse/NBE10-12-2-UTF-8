@@ -1,6 +1,5 @@
 package com.back.domain.dashboard.dashboard.service;
 
-import com.back.domain.chat.chatRoom.entity.ChatRoom;
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.chat.chatRoom.repository.ChatRoomRepository;
 import com.back.domain.dashboard.dashboard.dto.DashboardResponseDto;
@@ -13,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -29,7 +27,8 @@ public class DashboardService {
         long totalMembers = memberRepository.count();
         long todayMatches = matchRequestRepository.countTodayMatches(
                 LocalDateTime.now().toLocalDate().atStartOfDay(),
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                MatchStatus.MATCHED
         );
         long activeChatRooms = chatRoomRepository.countByStatus(ChatRoomStatus.ACTIVE);
 
