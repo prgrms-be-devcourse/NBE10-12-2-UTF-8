@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -76,6 +77,14 @@ public class MatchRequestService {
             throw new ServiceException("409-1", "이미 매칭된 요청은 취소할 수 없습니다.");
         }
         matchRequestRepository.delete(matchRequest);
+    }
+
+    @Transactional
+    public void cancelExpiredRequests() {
+        LocalDateTime expiredBefore = LocalDateTime.now().minusMinutes(5);
+        List<MatchRequest> expired = matchRequestRepository
+                .findExpiredPending(MatchStatus.PENDING, expiredBefore);
+        matchRequestRepository.deleteAll(expired);
     }
 
 }
