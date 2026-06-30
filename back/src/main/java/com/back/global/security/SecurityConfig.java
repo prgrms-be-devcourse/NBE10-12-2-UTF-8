@@ -26,6 +26,7 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(
                         auth -> auth
+                                .requestMatchers("/actuator/**").permitAll()
                                 .requestMatchers(
                                         "/api/*/members/login"
                                 ).permitAll()
