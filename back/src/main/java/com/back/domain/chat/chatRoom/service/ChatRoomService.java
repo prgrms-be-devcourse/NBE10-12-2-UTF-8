@@ -34,4 +34,19 @@ public class ChatRoomService {
         chatRoomParticipantService.createParticipants(savedRoom, members);
         return savedRoom;
     }
+
+    @Transactional
+    public ChatRoom closeChatRoom(UUID roomId, Member actor) {
+        ChatRoom chatRoom = getChatRoom(roomId);
+
+        chatRoomParticipantService.validateAccess(roomId, actor);
+
+        if (chatRoom.getStatus() == ChatRoomStatus.CLOSED) {
+            throw new ServiceException("409-1", "이미 종료된 채팅방입니다.");
+        }
+
+        chatRoom.close();
+
+        return chatRoom;
+    }
 }

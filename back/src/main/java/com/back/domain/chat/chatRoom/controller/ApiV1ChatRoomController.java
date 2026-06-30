@@ -12,11 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
@@ -46,6 +42,22 @@ public class ApiV1ChatRoomController {
         return new RsData<>(
                 "200-1",
                 "채팅방 정보 조회 성공",
+                new ChatRoomDto(chatRoom)
+        );
+    }
+
+    @DeleteMapping("/{roomId}")
+    @Operation(summary = "채팅방 종료")
+    public RsData<ChatRoomDto> closeRoom(@PathVariable UUID roomId) {
+        Member actor = rq.getActor();
+        if (actor == null) {
+            throw new ServiceException("401-1", "인증이 필요합니다.");
+        }
+
+        ChatRoom chatRoom = chatRoomService.closeChatRoom(roomId, actor);
+        return new RsData<>(
+                "200-1",
+                "채팅방 삭제 성공",
                 new ChatRoomDto(chatRoom)
         );
     }
