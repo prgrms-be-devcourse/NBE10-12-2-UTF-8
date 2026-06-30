@@ -1,6 +1,7 @@
 package com.back.domain.chat.chatRoomParticipant.service;
 
 import com.back.domain.chat.chatRoom.entity.ChatRoom;
+import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.chat.chatRoomParticipant.entity.ChatRoomParticipant;
 import com.back.domain.chat.chatRoomParticipant.repository.ChatRoomParticipantRepository;
 import com.back.domain.member.member.entity.Member;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -36,5 +38,10 @@ public class ChatRoomParticipantService {
             ChatRoomParticipant participant = new ChatRoomParticipant(chatRoom, member, "익명의 동료");
             chatRoomParticipantRepository.save(participant);
         }
+    }
+
+    public Optional<ChatRoom> findActiveChatRoomByMember(Member member) {
+        return chatRoomParticipantRepository.findByMemberIdAndChatRoomStatus(member.getId(), ChatRoomStatus.ACTIVE)
+                .map(ChatRoomParticipant::getChatRoom);
     }
 }

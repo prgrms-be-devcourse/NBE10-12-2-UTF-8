@@ -61,4 +61,25 @@ public class ApiV1ChatRoomController {
                 new ChatRoomDto(chatRoom)
         );
     }
+
+    @GetMapping("/active")
+    @Operation(summary = "현재 활성화된 채팅방 조회")
+    public RsData<ChatRoomDto> getActiveRoom() {
+        Member actor = rq.getActor();
+
+        if (actor == null) {
+            throw new ServiceException("401-1", "로그인 후 이용해주세요.");
+        }
+        return chatRoomService.findActiveChatRoom(actor)
+                .map(chatRoom -> new RsData<>(
+                        "200-1",
+                        "현재 활성화된 채팅방 조회 성공",
+                        new ChatRoomDto(chatRoom)
+                ))
+                .orElseGet(() -> new RsData<>(
+                        "200-2",
+                        "진행 중인 채팅방이 존재하지 않습니다.",
+                        null
+                ));
+    }
 }

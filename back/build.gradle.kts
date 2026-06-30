@@ -31,6 +31,10 @@ dependencies {
     // OpenAPI / Swagger
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2")
 
+    // Actuator & Prometheus
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus")
+
     // Database
     runtimeOnly("com.h2database:h2")
 
