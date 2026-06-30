@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { apiGetDashboard, isAdmin, INDUSTRY_NAMES } from '@/lib/api';
+import AdminHeader from '@/components/AdminHeader';
 
 const INDUSTRY_COLORS: Record<string, string> = {
   IT: '#3b7ff2', 서비스: '#34a06b', 금융: '#f5b400',
@@ -23,23 +23,10 @@ const MATCH_LOG = [
   stColor: r.st === 'MATCHED' ? '#137333' : r.st === 'PENDING' ? '#b06000' : '#5f6368',
 }));
 
-const LOGO_CHARS = [
-  { c: 'T', color: '#3b7ff2' }, { c: 'a', color: '#ea4c4c' }, { c: 'n', color: '#f5b400' },
-  { c: 'g', color: '#3b7ff2' }, { c: 'b', color: '#34a06b' }, { c: 'i', color: '#ea4c4c' },
-  { c: 's', color: '#f5b400' }, { c: 'i', color: '#3b7ff2' }, { c: 'l', color: '#34a06b' },
-];
-function TangbisilLogo({ size = 20 }: { size?: number }) {
-  return (
-    <span style={{ fontFamily: "var(--font-baloo2), 'Baloo 2', sans-serif", fontSize: size, fontWeight: 700, lineHeight: 1, letterSpacing: '-.6px', userSelect: 'none' }}>
-      {LOGO_CHARS.map(({ c, color }, i) => <span key={i} style={{ color }}>{c}</span>)}
-    </span>
-  );
-}
-
 export default function AdminStatsPage() {
   const router = useRouter();
   const [stats, setStats] = useState({ totalMembers: 0, todayMatches: 0, activeChatRooms: 0 });
-  const [bars, setBars] = useState<Array<{ name: string; count: number; color: string; pct: string }>>([]);
+  const [bars, setBars] = useState<Array<{ key: string; name: string; count: number; color: string; pct: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -53,6 +40,7 @@ export default function AdminStatsPage() {
         const sorted = [...data.industryStatistics].sort((a, b) => b.count - a.count);
         const max = sorted[0]?.count ?? 1;
         setBars(sorted.map(s => ({
+          key: s.industry,
           name: INDUSTRY_NAMES[s.industry] ?? s.industry,
           count: s.count,
           color: INDUSTRY_COLORS[s.industry] ?? '#9aa0a6',
@@ -65,18 +53,15 @@ export default function AdminStatsPage() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f8f9fa', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
-      {/* Header */}
-      <div style={{ height: 54, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 26px', background: '#fff', borderBottom: '1px solid #ebebeb' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Link href="/" style={{ textDecoration: 'none' }}><TangbisilLogo size={20} /></Link>
-          <span style={{ fontSize: 13, color: '#5f6368', borderLeft: '1px solid #dadce0', paddingLeft: 10 }}>관리자 · 통계</span>
-          <Link href="/admin/members" style={{ fontSize: 13, color: '#3b7ff2', marginLeft: 8, textDecoration: 'none' }}>회원 목록</Link>
-        </div>
-        <span style={{ fontSize: 12, color: '#137333', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#34a06b', display: 'inline-block' }} />
-          실시간
-        </span>
-      </div>
+      <AdminHeader
+        active="stats"
+        right={
+          <span style={{ fontSize: 12, color: '#137333', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#34a06b', display: 'inline-block' }} />
+            실시간
+          </span>
+        }
+      />
 
       <div style={{ flex: 1, padding: '22px 26px', overflowY: 'auto' }}>
         {loading ? (
@@ -111,7 +96,7 @@ export default function AdminStatsPage() {
                 {bars.length === 0 ? (
                   <div style={{ fontSize: 13, color: '#9aa0a6', textAlign: 'center', padding: '20px 0' }}>데이터 없음</div>
                 ) : bars.map(b => (
-                  <div key={b.name} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 11 }}>
+                  <div key={b.key} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 11 }}>
                     <span style={{ width: 84, fontSize: 12.5, color: '#5f6368', flexShrink: 0 }}>{b.name}</span>
                     <span style={{ flex: 1, height: 14, background: '#f1f3f4', borderRadius: 7, overflow: 'hidden' }}>
                       <span style={{ display: 'block', height: '100%', width: b.pct, background: b.color, borderRadius: 7 }} />

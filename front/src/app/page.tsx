@@ -23,6 +23,7 @@ const TOPICS = [
 ];
 
 const ROOM_KEY = 'tangbisil_room_id';
+const MATCH_KEY = 'tangbisil_match';
 
 /* ─── Logo ─────────────────────────────────────────── */
 const LOGO_CHARS = [
@@ -43,9 +44,13 @@ function TangbisilLogo({ size = 26 }: { size?: number }) {
 }
 
 /* ─── Icons ─────────────────────────────────────────── */
-function SearchIcon() {
+function SearchIcon({ onClick }: { onClick?: () => void }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+    <svg
+      width="20" height="20" viewBox="0 0 24 24" fill="none"
+      onClick={onClick}
+      style={{ flexShrink: 0, cursor: onClick ? 'pointer' : 'default' }}
+    >
       <circle cx="11" cy="11" r="7" stroke="#9aa0a6" strokeWidth="2" />
       <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="#9aa0a6" strokeWidth="2" strokeLinecap="round" />
     </svg>
@@ -102,6 +107,7 @@ export default function HomePage() {
   const [userIndustry, setUserIndustry] = useState('');
   const [matchSituation, setMatchSituation] = useState('');
   const [isLoggedIn, setIsLoggedIn]     = useState(false);
+  const [matchError, setMatchError]     = useState('');
 
   const phaseRef          = useRef<Phase>('search');
   const matchRequestIdRef = useRef<string | null>(null);
@@ -131,6 +137,7 @@ export default function HomePage() {
     matchRequestIdRef.current = null;
     seenMsgIds.current.clear();
     localStorage.removeItem(ROOM_KEY);
+    localStorage.removeItem(MATCH_KEY);
     setMessages([]);
     setInput('');
     setMatchSituation('');
@@ -141,7 +148,9 @@ export default function HomePage() {
   // 백엔드에 메시지 조회(GET) API가 아직 없어 상대 메시지는 실시간으로 받을 수 없음 — 보낸 메시지만 표시
   const enterChat = useCallback(async (roomId: string) => {
     chatRoomIdRef.current = roomId;
+    matchRequestIdRef.current = null;
     localStorage.setItem(ROOM_KEY, roomId);
+    localStorage.removeItem(MATCH_KEY);
     setPhaseSync('chatting');
     try {
       const room = await apiGetRoom(roomId);
@@ -184,10 +193,12 @@ export default function HomePage() {
 
   const doStartMatch = useCallback(async () => {
     const sit = situation.trim() || selectedTopic || '대화 중';
+    setMatchError('');
     setMatchSituation(sit);
     try {
       const data = await apiCreateMatch(sit);
       matchRequestIdRef.current = data.matchRequestId;
+      localStorage.setItem(MATCH_KEY, JSON.stringify({ id: data.matchRequestId, situation: sit }));
       setElapsed(0);
       setPhaseSync('matching');
       elapsedTimerRef.current = setInterval(() => setElapsed(p => p + 1), 1000);
@@ -195,7 +206,8 @@ export default function HomePage() {
     } catch (err: unknown) {
       const status = (err as { status?: number })?.status;
       if (status === 401) { window.location.href = '/login'; return; }
-      console.error(err);
+      setMatchSituation('');
+      setMatchError((err as Error)?.message || '매칭을 시작하지 못했어요. 다시 시도해주세요');
     }
   }, [situation, selectedTopic, setPhaseSync, startMatchPoll]);
 
@@ -205,14 +217,35 @@ export default function HomePage() {
     doStartMatch();
   }, [doStartMatch]);
 
+  // 검색 단계에서는 입력창 포커스 여부와 상관없이 Enter로 매칭을 시작할 수 있도록 전역 리스너 사용
+  useEffect(() => {
+    if (phase !== 'search') return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.isComposing) startMatch();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [phase, startMatch]);
+
   const cancelMatch = useCallback(async () => {
     stopAll();
     const id = matchRequestIdRef.current;
     matchRequestIdRef.current = null;
+    localStorage.removeItem(MATCH_KEY);
     setMatchSituation('');
     setPhaseSync('search');
     if (id) { try { await apiCancelMatch(id); } catch { /* ignore */ } }
   }, [stopAll, setPhaseSync]);
+
+  // 매칭 대기 중에는 ESC로 취소 가능
+  useEffect(() => {
+    if (phase !== 'matching') return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') cancelMatch();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [phase, cancelMatch]);
 
   const send = useCallback(async () => {
     const content = input.trim();
@@ -232,21 +265,42 @@ export default function HomePage() {
     } catch (err) { console.error(err); }
   }, [input]);
 
-  // On mount: check auth + industry + in-progress chat
+  // On mount: check auth + industry + in-progress chat/match (새로고침으로 잃어버린 매칭 요청도 복구)
   useEffect(() => {
     const token = getToken();
     setIsLoggedIn(!!token);
-    if (token) {
-      apiGetMe()
-        .then(me => setUserIndustry(INDUSTRY_NAMES[me.industry] ?? me.industry))
-        .catch(() => {});
-      apiGetActiveRoom()
-        .then(room => {
-          if (room) { chatRoomIdRef.current = room.roomId; setShowResume(true); }
-          else localStorage.removeItem(ROOM_KEY);
-        })
-        .catch(() => {});
-    }
+    if (!token) return;
+    apiGetMe()
+      .then(me => setUserIndustry(INDUSTRY_NAMES[me.industry] ?? me.industry))
+      .catch(() => {});
+    apiGetActiveRoom()
+      .then(room => {
+        if (room) { chatRoomIdRef.current = room.roomId; setShowResume(true); return; }
+        localStorage.removeItem(ROOM_KEY);
+
+        const raw = localStorage.getItem(MATCH_KEY);
+        if (!raw) return;
+        let saved: { id: string; situation: string };
+        try { saved = JSON.parse(raw); } catch { localStorage.removeItem(MATCH_KEY); return; }
+
+        apiGetMatch(saved.id)
+          .then(data => {
+            if (data.status === 'MATCHED' && data.chatRoomId) {
+              enterChat(data.chatRoomId);
+            } else if (data.status === 'PENDING') {
+              matchRequestIdRef.current = saved.id;
+              setMatchSituation(saved.situation);
+              setElapsed(0);
+              setPhaseSync('matching');
+              elapsedTimerRef.current = setInterval(() => setElapsed(p => p + 1), 1000);
+              startMatchPoll(saved.id);
+            } else {
+              localStorage.removeItem(MATCH_KEY);
+            }
+          })
+          .catch(() => localStorage.removeItem(MATCH_KEY));
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -303,7 +357,7 @@ export default function HomePage() {
 
           {/* Search bar row */}
           <div style={s.searchRow}>
-            <SearchIcon />
+            <SearchIcon onClick={phase === 'search' ? startMatch : undefined} />
 
             {/* Input / display */}
             {phase === 'search' && (
@@ -311,7 +365,6 @@ export default function HomePage() {
                 type="text"
                 value={situation}
                 onChange={e => { setSituation(e.target.value); setSelectedTopic(null); }}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) startMatch(); }}
                 placeholder="관심사를 입력하거나 상황을 골라 매칭하세요"
                 style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: '#3c4043', background: 'transparent' }}
               />
@@ -386,7 +439,7 @@ export default function HomePage() {
                   return (
                     <span
                       key={t.label}
-                      onClick={() => { setSelectedTopic(active ? null : t.label); setSituation(''); }}
+                      onClick={() => { setMatchError(''); setSelectedTopic(active ? null : t.label); setSituation(''); }}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: active ? '#e8f0fe' : '#f8f9fa', border: `1px solid ${active ? '#3b7ff2' : '#e8eaed'}`, borderRadius: 16, fontSize: 13, color: active ? '#3b7ff2' : '#3c4043', fontWeight: active ? 600 : 400, cursor: 'pointer' }}
                     >
                       {t.label}
@@ -395,6 +448,10 @@ export default function HomePage() {
                   );
                 })}
               </div>
+
+              {matchError && (
+                <div style={{ marginTop: 10, fontSize: 12, color: '#ea4c4c' }}>{matchError}</div>
+              )}
             </div>
           )}
 
@@ -466,7 +523,7 @@ export default function HomePage() {
               {phase === 'chatting'  && '10분이 지나면 대화는 자동으로 종료돼요'}
             </span>
             <span style={s.hintText}>
-              {phase === 'search'    && 'Enter 매칭 · ESC 취소'}
+              {phase === 'search'    && '돋보기 클릭 또는 Enter로 매칭'}
               {phase === 'matching'  && 'ESC 취소'}
               {phase === 'chatting'  && 'Enter 전송 · ⚑ 신고'}
             </span>

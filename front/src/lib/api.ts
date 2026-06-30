@@ -19,6 +19,19 @@ export const setAdmin = () => localStorage.setItem('isAdmin', '1');
 export const isAdmin = () =>
   typeof window !== 'undefined' && localStorage.getItem('isAdmin') === '1';
 
+// JWT의 role 클레임을 읽어 관리자 여부를 판별 (백엔드는 별도의 /me role 필드를 내려주지 않음)
+export const getRoleFromToken = (token: string): string | null => {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(base64).split('').map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join('')
+    );
+    return (JSON.parse(json).role as string) ?? null;
+  } catch {
+    return null;
+  }
+};
+
 /* ── Industry mapping (display ↔ API code) ──────────────────────── */
 export const INDUSTRY_CODES: Record<string, string> = {
   'IT/개발':       'IT',
@@ -39,6 +52,9 @@ async function req<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getToken();
   const res = await fetch(`${BASE}${path}`, {
     ...options,
+    // 백엔드가 로그인 시 1년짜리 accessToken 쿠키도 같이 심는데, 로그아웃이 유실되면
+    // 그 쿠키로 조용히 재인증되는 문제가 있어 인증은 항상 Authorization 헤더만 쓰도록 쿠키를 차단
+    credentials: 'omit',
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
