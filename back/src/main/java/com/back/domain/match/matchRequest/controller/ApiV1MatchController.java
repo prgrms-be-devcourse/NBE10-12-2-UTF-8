@@ -3,6 +3,7 @@ package com.back.domain.match.matchRequest.controller;
 import com.back.domain.match.matchRequest.dto.MatchRequestDto;
 import com.back.domain.match.matchRequest.dto.MatchResponseDto;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
+import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.match.matchRequest.service.MatchRequestService;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.service.MemberService;
@@ -44,12 +45,29 @@ public class ApiV1MatchController {
 
     }
 
-        @GetMapping("/{matchRequestId}")
-        public RsData<MatchResponseDto> getMatchRequest(
-                @PathVariable UUID matchRequestId
-        ) {
-            MatchRequest matchRequest = matchRequestService.findById(matchRequestId);
+    @GetMapping("/{matchRequestId}")
+    @Operation(summary = "매칭 상태 조회")
+    public RsData<MatchResponseDto> getMatchRequest(
+            @PathVariable UUID matchRequestId
+    ) {
+        MatchRequest matchRequest = matchRequestService.findById(matchRequestId);
 
+        if (matchRequest.getStatus() == MatchStatus.MATCHED) {
+            return new RsData<>(
+                    "200-1",
+                    "매칭 성공",
+                    MatchResponseDto.ofMatched(
+                    matchRequest.getRoom() != null ? matchRequest.getRoom().getId() : null)//임시로 null허용
+            );
+        }
 
+        return new RsData<>(
+                "200-2",
+                "매칭 대기 중",
+                MatchResponseDto.ofPending()
+        );
     }
+
+
 }
+
