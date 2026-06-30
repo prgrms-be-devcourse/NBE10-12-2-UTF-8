@@ -1,4 +1,7 @@
 package com.back.domain.dashboard.dashboard.dto;
 
-public class MatchStatisticsDto {
-}
+public record MatchStatisticsDto(
+        long totalMembers,
+        long todayMatches,
+        long activeChatRooms
+) {}
