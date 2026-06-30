@@ -237,4 +237,79 @@ public class ApiV1ChatRoomControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("404-1"))
                 .andExpect(jsonPath("$.msg").value("채팅방을 찾을 수 없습니다."));
     }
+
+    @Test
+    @DisplayName("현재 활성화된 채팅방 조회 성공")
+    void t8() throws Exception {
+        // Given
+        Member member = memberService.join("activeuser1@test.com", "1234", "IT", "USER");
+        String accessToken = memberService.genAccessToken(member);
+
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        UUID roomId = chatRoom.getId();
+
+        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, member, "익명의 동료"));
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        get("/api/v1/rooms/active")
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("현재 활성화된 채팅방 조회 성공"))
+                .andExpect(jsonPath("$.data.roomId").value(roomId.toString()))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.data.maxParticipants").value(2))
+                .andExpect(jsonPath("$.data.createdAt").exists())
+                .andExpect(jsonPath("$.data.closedAt").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("진행 중인 채팅방이 존재하지 않을 때 조회 성공")
+    void t9() throws Exception {
+        // Given
+        Member member = memberService.join("activeuser2@test.com", "1234", "IT", "USER");
+        String accessToken = memberService.genAccessToken(member);
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        get("/api/v1/rooms/active")
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-2"))
+                .andExpect(jsonPath("$.msg").value("진행 중인 채팅방이 존재하지 않습니다."))
+                .andExpect(jsonPath("$.data").value((Object) null));
+    }
+
+    @Test
+    @DisplayName("로그인하지 않고 활성 채팅방 조회 시 실패")
+    void t10() throws Exception {
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        get("/api/v1/rooms/active")
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.resultCode").value("401-1"))
+                .andExpect(jsonPath("$.msg").value("로그인 후 이용해주세요."));
+    }
 }

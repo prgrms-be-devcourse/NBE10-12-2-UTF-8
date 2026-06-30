@@ -1,5 +1,6 @@
 package com.back.domain.chat.chatRoomParticipant.repository;
 
+import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.chat.chatRoomParticipant.entity.ChatRoomParticipant;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -12,4 +13,6 @@ public interface ChatRoomParticipantRepository extends JpaRepository<ChatRoomPar
 
     Optional<ChatRoomParticipant> findByChatRoomIdAndMemberId(UUID roomId, UUID memberId);
     List<ChatRoomParticipant> findByChatRoomId(UUID chatRoomId);
+
+    Optional<ChatRoomParticipant> findByMemberIdAndChatRoomStatus(UUID memberId, ChatRoomStatus status);
 }
