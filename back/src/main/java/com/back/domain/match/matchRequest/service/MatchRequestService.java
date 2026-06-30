@@ -34,11 +34,15 @@ public class MatchRequestService {
 
         Optional<MatchRequest> opponent = matchRequestRepository
                 .findPendingByIndustryAndSituation(industry, situation, MatchStatus.PENDING)
-                .filter(r -> !r.equals(matchRequest));
+                .stream()
+                .filter(r -> !r.equals(matchRequest))
+                .findFirst();
         if (opponent.isEmpty()) {
             opponent = matchRequestRepository
                     .findPendingByIndustry(industry, MatchStatus.PENDING)
-                    .filter(r -> !r.equals(matchRequest));
+                    .stream()
+                    .filter(r -> !r.equals(matchRequest))
+                    .findFirst();
         }
         opponent.ifPresent(other -> {
             matchRequest.matchWith(null);
@@ -48,8 +52,15 @@ public class MatchRequestService {
         });
     }
 
+
+
     public MatchRequest findById(UUID id) {
         return matchRequestRepository.findById(id)
                 .orElseThrow(() -> new ServiceException("404-1", "매칭 요청을 찾을 수 없습니다."));
     }
+
+
+
+
+
 }
