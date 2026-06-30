@@ -15,6 +15,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/matches")
 @RequiredArgsConstructor
@@ -39,6 +41,15 @@ public class ApiV1MatchController {
                 "매칭 요청 생성 성공",
                 MatchResponseDto.ofCreated(matchRequest)
         );
+
+    }
+
+        @GetMapping("/{matchRequestId}")
+        public RsData<MatchResponseDto> getMatchRequest(
+                @PathVariable UUID matchRequestId
+        ) {
+            MatchRequest matchRequest = matchRequestService.findById(matchRequestId);
+
 
     }
 }

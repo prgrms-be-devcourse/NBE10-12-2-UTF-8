@@ -7,20 +7,20 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID> {
     boolean existsByMemberAndStatus(Member member, MatchStatus status);
 
     @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry AND r.situation = :situation AND r.status = :status")
-    Optional<MatchRequest> findPendingByIndustryAndSituation(
+    List<MatchRequest> findPendingByIndustryAndSituation(
             @Param("industry") String industry,
             @Param("situation") String situation,
             @Param("status") MatchStatus status);
 
-    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry  AND r.status = :status")
-    Optional<MatchRequest> findPendingByIndustry(
+    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry AND r.status = :status")
+    List<MatchRequest> findPendingByIndustry(
             @Param("industry") String industry,
             @Param("status") MatchStatus status);
 }
