@@ -1,5 +1,7 @@
 package com.back.domain.match.matchRequest.service;
 
+import com.back.domain.chat.chatRoom.entity.ChatRoom;
+import com.back.domain.chat.chatRoom.service.ChatRoomService;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.match.matchRequest.repository.MatchRequestRepository;
@@ -9,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,6 +19,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MatchRequestService {
     private final MatchRequestRepository matchRequestRepository;
+    private final ChatRoomService chatRoomService;
 
     @Transactional
     public MatchRequest create(Member member, String situation) {
@@ -45,8 +49,11 @@ public class MatchRequestService {
                     .findFirst();
         }
         opponent.ifPresent(other -> {
-            matchRequest.matchWith(null);
-            other.matchWith(null);
+            ChatRoom chatRoom = chatRoomService.createChatRoom(List.of(matchRequest.getMember(), other.getMember()));
+
+            matchRequest.matchWith(chatRoom);
+            other.matchWith(chatRoom);
+
             matchRequestRepository.save(matchRequest);
             matchRequestRepository.save(other);
         });
