@@ -75,4 +75,17 @@ public class MemberService {
     public Page<Member> findAll(Pageable pageable) {
         return memberRepository.findAll(pageable);
     }
+
+    @Transactional
+    public void updateIndustry(Member member, String industry) {
+        Member findMember = memberRepository.findById(member.getId())
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
+        findMember.updateIndustry(industry);
+    }
+    @Transactional
+    public void delete(Member member) {
+        Member findMember = memberRepository.findById(member.getId())
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
+        memberRepository.delete(findMember);
+    }
 }

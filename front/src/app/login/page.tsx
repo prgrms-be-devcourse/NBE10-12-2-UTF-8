@@ -5,14 +5,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiLogin, setTokens, setAdmin } from '@/lib/api';
 
-function BisilLogo({ size = 42 }: { size?: number }) {
+const LOGO_CHARS = [
+  { c: 'T', color: '#3b7ff2' }, { c: 'a', color: '#ea4c4c' }, { c: 'n', color: '#f5b400' },
+  { c: 'g', color: '#3b7ff2' }, { c: 'b', color: '#34a06b' }, { c: 'i', color: '#ea4c4c' },
+  { c: 's', color: '#f5b400' }, { c: 'i', color: '#3b7ff2' }, { c: 'l', color: '#34a06b' },
+];
+function TangbisilLogo({ size = 42 }: { size?: number }) {
+  const ls = size >= 35 ? '-1.2px' : '-0.8px';
   return (
-    <span style={{ fontFamily: "'Baloo 2', sans-serif", fontSize: size, fontWeight: 700, lineHeight: 1, letterSpacing: '-1.2px', userSelect: 'none' }}>
-      <span style={{ color: '#3b7ff2' }}>B</span>
-      <span style={{ color: '#ea4c4c' }}>i</span>
-      <span style={{ color: '#f5b400' }}>s</span>
-      <span style={{ color: '#3b7ff2' }}>i</span>
-      <span style={{ color: '#34a06b' }}>l</span>
+    <span style={{ fontFamily: "var(--font-baloo2), 'Baloo 2', sans-serif", fontSize: size, fontWeight: 700, lineHeight: 1, letterSpacing: ls, userSelect: 'none' }}>
+      {LOGO_CHARS.map(({ c, color }, i) => <span key={i} style={{ color }}>{c}</span>)}
     </span>
   );
 }
@@ -47,7 +49,7 @@ export default function LoginPage() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
-      <BisilLogo size={42} />
+      <TangbisilLogo size={42} />
       <div style={{ fontSize: 14, color: '#5f6368', marginBottom: 26, marginTop: 8 }}>
         검색하듯 로그인하고, 익명으로 동료와 연결되세요
       </div>

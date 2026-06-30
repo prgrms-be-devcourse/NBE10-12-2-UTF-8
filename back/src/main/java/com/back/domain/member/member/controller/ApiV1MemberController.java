@@ -13,6 +13,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -117,6 +118,43 @@ public class ApiV1MemberController {
                 "200-1",
                 "내 정보 조회 성공",
                 new MemberMeRes(actor.getEmail(), actor.getIndustry())
+        );
+    }
+    public record MemberUpdateIndustryReq(
+            @NotBlank
+            String industry
+    ) {}
+
+    public record MemberUpdateIndustryRes(
+            String industry
+    ) {}
+
+    @PatchMapping("/me")
+    @Operation(summary = "산업군 수정")
+    public RsData<MemberUpdateIndustryRes> updateIndustry(
+            @Valid @RequestBody MemberUpdateIndustryReq req
+    ) {
+        Member actor = rq.getActor();
+        memberService.updateIndustry(actor, req.industry());
+
+        return new RsData<>(
+                "200-1",
+                "소속 산업군 수정 성공",
+                new MemberUpdateIndustryRes(req.industry())
+        );
+    }
+
+    @DeleteMapping("/me")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "회원 탈퇴")
+    public RsData<Void> delete() {
+        Member actor = rq.getActor();
+        memberService.delete(actor);
+        rq.deleteCookie("accessToken");
+
+        return new RsData<>(
+                "200-1",
+                "회원 삭제 성공"
         );
     }
 }

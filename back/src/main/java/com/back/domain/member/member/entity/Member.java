@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -25,6 +26,7 @@ public class Member extends BaseEntity {
     private boolean isSuspended;
     @Column(unique = true)
     private UUID refreshToken;
+    private LocalDateTime refreshTokenExpiresAt;
 
     public Member(UUID id, String email, String role) {
         setId(id);
@@ -42,6 +44,9 @@ public class Member extends BaseEntity {
 
     public void updateRefreshToken(UUID refreshToken) {
         this.refreshToken = refreshToken;
+        this.refreshTokenExpiresAt = refreshToken != null
+                ? LocalDateTime.now().plusMonths(1)
+                : null;
     }
 
     public boolean isAdmin() {
@@ -52,5 +57,8 @@ public class Member extends BaseEntity {
         List<GrantedAuthority> authorities = new ArrayList<>();
         authorities.add(new SimpleGrantedAuthority("ROLE_" + this.role));
         return authorities;
+    }
+    public void updateIndustry(String industry) {
+        this.industry = industry;
     }
 }

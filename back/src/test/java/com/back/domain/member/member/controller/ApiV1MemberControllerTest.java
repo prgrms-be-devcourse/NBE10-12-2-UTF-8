@@ -246,4 +246,113 @@ public class ApiV1MemberControllerTest {
                 .andExpect(jsonPath("$.data.email").value("test@test.com"))
                 .andExpect(jsonPath("$.data.industry").value("IT"));
     }
+    @Test
+    @DisplayName("산업군 수정")
+    void t7() throws Exception {
+        // Given - 회원가입 선행
+        mvc.perform(
+                post("/api/v1/members/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                 "email": "test@test.com",
+                                 "password": "1234",
+                                 "industry": "IT"
+                            }
+                            """)
+        );
+
+        // Given - 로그인 선행
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "test@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        patch("/api/v1/members/me")
+                                .header("Authorization", "Bearer " + accessToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "industry": "금융"
+                                    }
+                                    """)
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("소속 산업군 수정 성공"))
+                .andExpect(jsonPath("$.data.industry").value("금융"));
+    }
+    @Test
+    @DisplayName("회원 탈퇴")
+    void t8() throws Exception {
+        // Given - 회원가입 선행
+        mvc.perform(
+                post("/api/v1/members/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                 "email": "test@test.com",
+                                 "password": "1234",
+                                 "industry": "IT"
+                            }
+                            """)
+        );
+
+        // Given - 로그인 선행
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "test@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        delete("/api/v1/members/me")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isNoContent())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("회원 삭제 성공"));
+    }
 }

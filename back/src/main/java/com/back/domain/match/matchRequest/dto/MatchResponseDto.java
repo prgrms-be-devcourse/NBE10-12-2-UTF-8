@@ -28,6 +28,11 @@ public record MatchResponseDto(
     }
 
     public static MatchResponseDto ofPending() {
-        return new MatchResponseDto(null, MatchStatus.PENDING, null, null);
+
+        return new MatchResponseDto(
+                null,
+                MatchStatus.PENDING,
+                null,
+                null);
     }
 }
