@@ -19,8 +19,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -240,4 +243,171 @@ public class ApiV1ChatMessageControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("400-2"))
                 .andExpect(jsonPath("$.msg").value("메시지는 500자를 초과할 수 없습니다."));
     }
+
+    @Test
+    @DisplayName("메시지 조회 성공 - after 입력")
+    void t7() throws Exception {
+        Member member = memberService.join("user1@test.com", "1234", "IT", "USER");
+        String accessToken = memberService.genAccessToken(member);
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        UUID roomId = chatRoom.getId();
+        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, member, "익명의 동료"));
+
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/rooms/" + roomId + "/message")
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                           {
+                                            "content": "첫 번째 메시지"
+                                           }
+                                        """)
+                );
+
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("메시지 목록 조회 성공"))
+                .andExpect(jsonPath("$.data[0].content").value("오늘 진짜 야근 미쳤네요."))
+                .andExpect(jsonPath("$.data[0].isMine").value(true));
+    }
+
+    @Test
+    @DisplayName("메시지 폴링 - 타인 메시지 isMine: false")
+    void t8() throws Exception {
+        Member sender = memberService.join("user1@test.com", "1234", "IT", "USER");
+        Member viewer = memberService.join("user2@test.com", "1234", "Finance", "USER");
+        String viewerToken = memberService.genAccessToken(viewer);
+
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        UUID roomId = chatRoom.getId();
+        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, sender, "익명의 동료"));
+        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, viewer, "익명의 동료"));
+
+        String senderToken = memberService.genAccessToken(sender);
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/rooms/" + roomId + "/messages")
+                                .cookie(new Cookie("accessToken", senderToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                                    {
+                                                        "content": "저도요... 갑자기 핫픽스 떨어졌어요"
+                                                    }        
+                                                """
+                                )
+                );
+
+        ResultActions result = mvc.perform(get("/api/v1/rooms/" + roomId + "/messages")
+                        .cookie(new Cookie("accessToken", viewerToken)))
+                .andDo(print());
+
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.data[0].isMine").value(false));
+    }
+
+    @Test
+    @DisplayName("메시지 폴링 - after 파라미터 필터링")
+    void t9() throws Exception {
+        Member member = memberService.join("user1@test.com", "1234", "IT", "USER");
+        String accessToken = memberService.genAccessToken(member);
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        UUID roomId = chatRoom.getId();
+        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, member, "익명의 동료"));
+
+        mvc.perform(post("/api/v1/rooms/" + roomId + "/messages")
+                .cookie(new Cookie("accessToken", accessToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                            {
+                                "content":"첫 번째"
+                            }
+                         """
+                )
+        );
+
+        String future = LocalDateTime.now().plusSeconds(10)
+                .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+
+        ResultActions result = mvc.perform(get("/api/v1/rooms/" + roomId + "/messages")
+                        .param("after", future)
+                        .cookie(new Cookie("accessToken", accessToken)))
+                .andDo(print());
+
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-2"))
+                .andExpect(jsonPath("$.msg").value("신규 메시지 없음"));
+    }
+
+
+    @Test
+    @DisplayName("메시지 폴링 - 신규 메시지 없음")
+    void t10() throws Exception {
+        Member member = memberService.join("user1@test.com", "1234", "IT", "USER");
+        String accessToken = memberService.genAccessToken(member);
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        UUID roomId = chatRoom.getId();
+        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, member, "익명의 동료"));
+
+        ResultActions result = mvc.perform(get("/api/v1/rooms/" + roomId + "/messages")
+                        .cookie(new Cookie("accessToken", accessToken)))
+                .andDo(print());
+
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-2"))
+                .andExpect(jsonPath("$.msg").value("신규 메시지 없음"));
+    }
+
+    // t11: 종료된 채팅방 폴링
+    @Test
+    @DisplayName("메시지 폴링 - 종료된 채팅방")
+    void t11() throws Exception {
+        Member member = memberService.join("user1@test.com", "1234", "IT", "USER");
+        String accessToken = memberService.genAccessToken(member);
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        chatRoom.close();
+        UUID roomId = chatRoom.getId();
+        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, member, "익명의 동료"));
+
+        ResultActions result = mvc.perform(get("/api/v1/rooms/" + roomId + "/messages")
+                        .cookie(new Cookie("accessToken", accessToken)))
+                .andDo(print());
+
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-3"))
+                .andExpect(jsonPath("$.msg").value("종료된 채팅방입니다."));
+    }
+
+
+    @Test
+    @DisplayName("메시지 폴링 - 존재하지 않는 채팅방 404")
+    void t12() throws Exception {
+        Member member = memberService.join("user1@test.com", "1234", "IT", "USER");
+        String accessToken = memberService.genAccessToken(member);
+
+        ResultActions result = mvc.perform(get("/api/v1/rooms/" + UUID.randomUUID() + "/messages")
+                        .cookie(new Cookie("accessToken", accessToken)))
+                .andDo(print());
+
+        result.andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.resultCode").value("404-1"))
+                .andExpect(jsonPath("$.msg").value("채팅방을 찾을 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("메시지 폴링 - 비인증 사용자 401")
+    void t13() throws Exception {
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+
+        ResultActions result = mvc.perform(get("/api/v1/rooms/" + chatRoom.getId() + "/messages"))
+                .andDo(print());
+
+        result.andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.resultCode").value("401-1"));
+    }
+
+
 }
