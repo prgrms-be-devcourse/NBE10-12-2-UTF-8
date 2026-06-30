@@ -21,8 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -142,7 +142,7 @@ public class ApiV1ChatRoomControllerTest {
         // When
         ResultActions resultActions = mvc
                 .perform(
-                        delete("/api/v1/rooms/" + roomId)
+                        patch("/api/v1/rooms/" + roomId)
                                 .cookie(new Cookie("accessToken", accessToken))
                                 .contentType(MediaType.APPLICATION_JSON)
                 )
@@ -152,7 +152,7 @@ public class ApiV1ChatRoomControllerTest {
         resultActions
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
-                .andExpect(jsonPath("$.msg").value("채팅방 삭제 성공"))
+                .andExpect(jsonPath("$.msg").value("채팅방 상태 수정 성공 (채팅방 종료)"))
                 .andExpect(jsonPath("$.data.roomId").value(roomId.toString()))
                 .andExpect(jsonPath("$.data.status").value("CLOSED"))
                 .andExpect(jsonPath("$.data.maxParticipants").value(2))
@@ -173,7 +173,7 @@ public class ApiV1ChatRoomControllerTest {
         // When
         ResultActions resultActions = mvc
                 .perform(
-                        delete("/api/v1/rooms/" + roomId)
+                        patch("/api/v1/rooms/" + roomId)
                                 .cookie(new Cookie("accessToken", accessToken))
                                 .contentType(MediaType.APPLICATION_JSON)
                 )
@@ -201,7 +201,7 @@ public class ApiV1ChatRoomControllerTest {
         // When
         ResultActions resultActions = mvc
                 .perform(
-                        delete("/api/v1/rooms/" + roomId)
+                        patch("/api/v1/rooms/" + roomId)
                                 .cookie(new Cookie("accessToken", accessToken))
                                 .contentType(MediaType.APPLICATION_JSON)
                 )
@@ -225,7 +225,7 @@ public class ApiV1ChatRoomControllerTest {
         // When
         ResultActions resultActions = mvc
                 .perform(
-                        delete("/api/v1/rooms/" + nonexistentRoomId)
+                        patch("/api/v1/rooms/" + nonexistentRoomId)
                                 .cookie(new Cookie("accessToken", accessToken))
                                 .contentType(MediaType.APPLICATION_JSON)
                 )

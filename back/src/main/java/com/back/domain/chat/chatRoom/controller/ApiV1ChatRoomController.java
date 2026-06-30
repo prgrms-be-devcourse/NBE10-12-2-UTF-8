@@ -46,7 +46,7 @@ public class ApiV1ChatRoomController {
         );
     }
 
-    @DeleteMapping("/{roomId}")
+    @PatchMapping("/{roomId}")
     @Operation(summary = "채팅방 종료")
     public RsData<ChatRoomDto> closeRoom(@PathVariable UUID roomId) {
         Member actor = rq.getActor();
@@ -57,7 +57,7 @@ public class ApiV1ChatRoomController {
         ChatRoom chatRoom = chatRoomService.closeChatRoom(roomId, actor);
         return new RsData<>(
                 "200-1",
-                "채팅방 삭제 성공",
+                "채팅방 상태 수정 성공 (채팅방 종료)",
                 new ChatRoomDto(chatRoom)
         );
     }
