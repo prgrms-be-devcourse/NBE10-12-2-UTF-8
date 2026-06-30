@@ -23,8 +23,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -245,31 +244,35 @@ public class ApiV1ChatMessageControllerTest {
     }
 
     @Test
-    @DisplayName("메시지 조회 성공 - after 입력")
+    @DisplayName("메시지 전체 조회 성공 - isMine: true")
     void t7() throws Exception {
-        Member member = memberService.join("user1@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("user4@test.com", "1234", "IT", "USER");
         String accessToken = memberService.genAccessToken(member);
         ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
         UUID roomId = chatRoom.getId();
         chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, member, "익명의 동료"));
 
-        ResultActions resultActions = mvc
-                .perform(
-                        post("/api/v1/rooms/" + roomId + "/message")
-                                .cookie(new Cookie("accessToken", accessToken))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("""
-                                           {
-                                            "content": "첫 번째 메시지"
-                                           }
-                                        """)
-                );
+        mvc.perform(
+                post("/api/v1/rooms/" + roomId + "/messages")
+                        .cookie(new Cookie("accessToken", accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                   {
+                                    "content": "첫 번째 메시지"
+                                   }
+                                """)
+        );
+
+        ResultActions resultActions = mvc.perform(
+                get("/api/v1/rooms/" + roomId + "/messages")
+                        .cookie(new Cookie("accessToken", accessToken))
+        ).andDo(print());
 
         resultActions
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
-                .andExpect(jsonPath("$.msg").value("메시지 목록 조회 성공"))
-                .andExpect(jsonPath("$.data[0].content").value("오늘 진짜 야근 미쳤네요."))
+                .andExpect(jsonPath("$.msg").value("메시지 조회 성공"))
+                .andExpect(jsonPath("$.data[0].content").value("첫 번째 메시지"))
                 .andExpect(jsonPath("$.data[0].isMine").value(true));
     }
 
@@ -286,21 +289,19 @@ public class ApiV1ChatMessageControllerTest {
         chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, viewer, "익명의 동료"));
 
         String senderToken = memberService.genAccessToken(sender);
-        ResultActions resultActions = mvc
-                .perform(
-                        post("/api/v1/rooms/" + roomId + "/messages")
-                                .cookie(new Cookie("accessToken", senderToken))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        """
-                                                    {
-                                                        "content": "저도요... 갑자기 핫픽스 떨어졌어요"
-                                                    }        
-                                                """
-                                )
-                );
+        mvc.perform(
+                post("/api/v1/rooms/" + roomId + "/messages")
+                        .cookie(new Cookie("accessToken", senderToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                    {
+                                        "content": "저도요... 갑자기 핫픽스 떨어졌어요"
+                                    }
+                                """)
+        );
 
-        ResultActions result = mvc.perform(get("/api/v1/rooms/" + roomId + "/messages")
+        ResultActions result = mvc.perform(
+                get("/api/v1/rooms/" + roomId + "/messages")
                         .cookie(new Cookie("accessToken", viewerToken)))
                 .andDo(print());
 
@@ -325,8 +326,7 @@ public class ApiV1ChatMessageControllerTest {
                             {
                                 "content":"첫 번째"
                             }
-                         """
-                )
+                         """)
         );
 
         String future = LocalDateTime.now().plusSeconds(10)
@@ -346,7 +346,7 @@ public class ApiV1ChatMessageControllerTest {
     @Test
     @DisplayName("메시지 폴링 - 신규 메시지 없음")
     void t10() throws Exception {
-        Member member = memberService.join("user1@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("user4@test.com", "1234", "IT", "USER");
         String accessToken = memberService.genAccessToken(member);
         ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
         UUID roomId = chatRoom.getId();
@@ -354,7 +354,7 @@ public class ApiV1ChatMessageControllerTest {
 
         ResultActions result = mvc.perform(get("/api/v1/rooms/" + roomId + "/messages")
                         .cookie(new Cookie("accessToken", accessToken)))
-                .andDo(print());
+                        .andDo(print());
 
         result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-2"))
@@ -368,17 +368,34 @@ public class ApiV1ChatMessageControllerTest {
         Member member = memberService.join("user1@test.com", "1234", "IT", "USER");
         String accessToken = memberService.genAccessToken(member);
         ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
-        chatRoom.close();
         UUID roomId = chatRoom.getId();
         chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, member, "익명의 동료"));
 
+        mvc.perform(
+                post("/api/v1/rooms/" + roomId + "/messages")
+                        .cookie(new Cookie("accessToken", accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                    {
+                                        "content": "대화 내용"
+                                    }
+                                """)
+        );
+
+        mvc.perform(
+                patch("/api/v1/rooms/" + roomId)
+                        .cookie(new Cookie("accessToken", accessToken))
+        );
+
+
         ResultActions result = mvc.perform(get("/api/v1/rooms/" + roomId + "/messages")
-                        .cookie(new Cookie("accessToken", accessToken)))
+                .cookie(new Cookie("accessToken", accessToken)))
                 .andDo(print());
 
         result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-3"))
-                .andExpect(jsonPath("$.msg").value("종료된 채팅방입니다."));
+                .andExpect(jsonPath("$.msg").value("종료된 채팅방입니다."))
+                .andExpect(jsonPath("$.data").value((Object) null));
     }
 
 
@@ -390,7 +407,7 @@ public class ApiV1ChatMessageControllerTest {
 
         ResultActions result = mvc.perform(get("/api/v1/rooms/" + UUID.randomUUID() + "/messages")
                         .cookie(new Cookie("accessToken", accessToken)))
-                .andDo(print());
+                        .andDo(print());
 
         result.andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.resultCode").value("404-1"))
