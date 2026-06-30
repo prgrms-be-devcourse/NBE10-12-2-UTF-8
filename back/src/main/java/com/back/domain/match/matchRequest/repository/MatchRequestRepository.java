@@ -25,7 +25,7 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
             @Param("industry") String industry,
             @Param("status") MatchStatus status);
 
-    @Query("SELECT COUNT(r) FROM MatchRequest r WHERE r.status = :status AND r.createdAt BETWEEN :start AND :end")
+    @Query("SELECT COUNT(DISTINCT r.room.id) FROM MatchRequest r WHERE r.status = :status AND r.createdAt BETWEEN :start AND :end")
     long countTodayMatches(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
