@@ -46,7 +46,7 @@ public class ReportService {
         Report report = reportRepository.save(new Report(reporter, reported, room, reportedMessageId, reason));
 
         // 5. 비동기 이벤트 발행
-        eventPublisher.publishEvent(new ReportCreatedEvent(report, room, reportedMessageId));
+        eventPublisher.publishEvent(new ReportCreatedEvent(report.getId(), room.getId(), reportedMessageId));
 
         log.info("[ReportService] 신고 접수 완료 - Thread: {}", Thread.currentThread().getName());
         return report;
