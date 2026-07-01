@@ -13,6 +13,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +27,8 @@ import java.util.UUID;
 public class ApiV1MemberController {
     private final MemberService memberService;
     private final Rq rq;
+    @Value("${custom.accessToken.expirationSeconds}")
+    private int accessTokenExpirationSeconds;
 
     public record MemberSignupReq(
             @NotBlank
@@ -77,7 +80,7 @@ public class ApiV1MemberController {
         String accessToken = memberService.genAccessToken(member);
         UUID refreshToken = memberService.genRefreshToken(member);
 
-        rq.setCookie("accessToken", accessToken);
+        rq.setCookie("accessToken", accessToken, accessTokenExpirationSeconds);
 
         return new RsData<>(
                 "200-1",
@@ -86,7 +89,7 @@ public class ApiV1MemberController {
                         "Bearer",
                         accessToken,
                         refreshToken.toString(),
-                        3600
+                        accessTokenExpirationSeconds
                 )
         );
     }
