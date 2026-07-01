@@ -25,12 +25,13 @@ import org.springframework.test.context.transaction.TestTransaction;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 
 import java.util.UUID;
 import java.util.List;
 import java.util.ArrayList;
 
-import static org.springframework.web.bind.annotation.RequestMethod.POST;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -144,11 +145,12 @@ public class ApiV1ReportControllerTest {
         TestTransaction.flagForCommit();
         TestTransaction.end();
 
-        // 비동기 스레드가 돌 때까지 0.5초 대기
-        Thread.sleep(500);
-
-        // 최종 비동기 메시지 복사 개수 검증
-        org.assertj.core.api.Assertions.assertThat(reportedMessageRepository.count()).isEqualTo(1);
+        // Awaitility를 사용해 비동기 저장이 완료되는 순간 즉시 대기 탈출
+        await()
+                .atMost(2, SECONDS)
+                .untilAsserted(() ->
+                        org.assertj.core.api.Assertions.assertThat(reportedMessageRepository.count()).isEqualTo(1)
+                );
     }
 
     @Test
