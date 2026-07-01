@@ -30,9 +30,6 @@ public class ApiV1ReportController {
     @Operation(summary = "신고 접수")
     public RsData<ReportResponseDto> createReport(@RequestBody @Valid ReportRequestDto requestDto) {
         Member actor = rq.getActor();
-        if (actor == null) {
-            throw new com.back.global.exception.ServiceException("401-1", "로그인 후 이용해주세요.");
-        }
 
         Report report = reportService.createReport(
                 actor,
