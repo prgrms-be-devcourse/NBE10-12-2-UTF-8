@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -61,6 +62,18 @@ public class MemberService {
         UUID token = UUID.randomUUID();
         member.updateRefreshToken(token);
         return token;
+    }
+    public String refreshAccessToken(UUID refreshToken) {
+        Member member = memberRepository.findByRefreshToken(refreshToken)
+                .orElseThrow(() ->
+                        new ServiceException("401-1", "유효하지 않은 RefreshToken 입니다."));
+
+        if (member.getRefreshTokenExpiresAt() == null ||
+                member.getRefreshTokenExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ServiceException("401-2", "RefreshToken이 만료되었습니다.");
+        }
+
+        return genAccessToken(member);
     }
 
     public Map<String, Object> payload(String accessToken) {

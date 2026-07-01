@@ -28,7 +28,8 @@ public class SecurityConfig {
                         auth -> auth
                                 .requestMatchers("/actuator/**").permitAll()
                                 .requestMatchers(
-                                        "/api/*/members/login"
+                                        "/api/*/members/login",
+                                        "/api/*/members/refresh"
                                 ).permitAll()
                                 .requestMatchers(
                                         HttpMethod.POST,

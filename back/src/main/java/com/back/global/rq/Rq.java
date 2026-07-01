@@ -73,8 +73,8 @@ public class Rq {
         cookie.setPath("/");
         cookie.setHttpOnly(true);
 
-        cookie.setDomain("localhost");
-        cookie.setSecure(true);
+//        cookie.setDomain("localhost");
+        cookie.setSecure(false);
         cookie.setAttribute("SameSite", "Strict");
 
         if (value.isBlank()) cookie.setMaxAge(0);
