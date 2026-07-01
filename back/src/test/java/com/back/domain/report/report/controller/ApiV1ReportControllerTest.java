@@ -9,9 +9,13 @@ import com.back.domain.chat.chatRoomParticipant.entity.ChatRoomParticipant;
 import com.back.domain.chat.chatRoomParticipant.repository.ChatRoomParticipantRepository;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.service.MemberService;
+import com.back.domain.report.report.repository.ReportRepository;
+import com.back.domain.report.report.repository.ReportedMessageRepository;
 import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import com.back.domain.member.member.repository.MemberRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -23,6 +27,8 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import java.util.List;
+import java.util.ArrayList;
 
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -35,6 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Transactional
 public class ApiV1ReportControllerTest {
+    private final List<Member> createdMembers = new ArrayList<>();
 
     @Autowired
     private MockMvc mvc;
@@ -52,10 +59,35 @@ public class ApiV1ReportControllerTest {
     private ChatMessageRepository chatMessageRepository;
 
     @Autowired
-    private com.back.domain.report.report.repository.ReportRepository reportRepository;
+    private ReportRepository reportRepository;
 
     @Autowired
-    private com.back.domain.report.report.repository.ReportedMessageRepository reportedMessageRepository;
+    private ReportedMessageRepository reportedMessageRepository;
+
+    @Autowired
+    private MemberRepository memberRepository;
+
+    @AfterEach
+    void cleanUp() {
+        if (TestTransaction.isActive()) {
+            if (TestTransaction.isFlaggedForRollback()) {
+                TestTransaction.flagForRollback();
+            } else {
+                TestTransaction.flagForCommit();
+            }
+            TestTransaction.end();
+        }
+        TestTransaction.start();
+        reportedMessageRepository.deleteAll();
+        reportRepository.deleteAll();
+        chatMessageRepository.deleteAll();
+        chatRoomParticipantRepository.deleteAll();
+        chatRoomRepository.deleteAll();
+        createdMembers.forEach(memberRepository::delete);
+        createdMembers.clear();
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+    }
 
     @Test
     @DisplayName("신고 접수 성공")
@@ -64,6 +96,8 @@ public class ApiV1ReportControllerTest {
         // 1. 신고자와 피신고자 회원가입 및 토큰 발급
         Member reporter = memberService.join("reporter@test.com", "1234", "IT", "USER");
         Member reported = memberService.join("reported@test.com", "1234", "IT", "USER");
+        createdMembers.add(reporter);
+        createdMembers.add(reported);
         String accessToken = memberService.genAccessToken(reporter);
 
         // 2. 대화방 생성 및 참여자 등록
@@ -104,7 +138,7 @@ public class ApiV1ReportControllerTest {
         resultActions
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.resultCode").value("201-1"))
-                .andExpect(jsonPath("$.msg").value("신고가 접수되었습니다."));
+                .andExpect(jsonPath("$.msg").value("신고 생성 성공"));
 
         // API가 마친 메인 트랜잭션 강제 커밋 -> AFTER_COMMIT 이벤트 유발
         TestTransaction.flagForCommit();
@@ -115,12 +149,103 @@ public class ApiV1ReportControllerTest {
 
         // 최종 비동기 메시지 복사 개수 검증
         org.assertj.core.api.Assertions.assertThat(reportedMessageRepository.count()).isEqualTo(1);
-
-        // 수동 클린업 (수동 커밋을 수행했으므로 강제 롤백을 못해 외래키 종속성 역순으로 직접 제거)
-        reportedMessageRepository.deleteAll();
-        reportRepository.deleteAll(); // ReportRepository 주입 추가 및 삭제 처리
-        chatMessageRepository.deleteAll();
-        chatRoomParticipantRepository.deleteAll();
-        chatRoomRepository.deleteAll();
     }
-}
+
+    @Test
+    @DisplayName("존재하지 않는 채팅방 ID로 신고 시 실패")
+    void t2() throws Exception {
+        // Given
+        Member reporter = memberService.join("reporter2@test.com", "1234", "IT", "USER");
+        createdMembers.add(reporter);
+        String accessToken = memberService.genAccessToken(reporter);
+        UUID nonExistentRoomId = UUID.randomUUID();
+        UUID mockMessageId = UUID.randomUUID();
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/reports")
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                            "roomId": "%s",
+                                            "reportedMessageId": "%s",
+                                            "reason": "사내 비방 및 욕설"
+                                        }
+                                        """.formatted(nonExistentRoomId, mockMessageId))
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.resultCode").value("404-1"))
+                .andExpect(jsonPath("$.msg").value("채팅방을 찾을 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 메시지 ID로 신고 시 실패")
+    void t3() throws Exception {
+        // Given
+        Member reporter = memberService.join("reporter3@test.com", "1234", "IT", "USER");
+        createdMembers.add(reporter);
+        String accessToken = memberService.genAccessToken(reporter);
+
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        UUID roomId = chatRoom.getId();
+
+        UUID nonExistentMessageId = UUID.randomUUID();
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/reports")
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                            "roomId": "%s",
+                                            "reportedMessageId": "%s",
+                                            "reason": "사내 비방 및 욕설"
+                                        }
+                                        """.formatted(roomId, nonExistentMessageId))
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.resultCode").value("404-2"))
+                .andExpect(jsonPath("$.msg").value("신고 대상 메시지를 찾을 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("비로그인 사용자가 신고 시도 시 실패")
+    void t4() throws Exception {
+        // Given
+        UUID mockRoomId = UUID.randomUUID();
+        UUID mockMessageId = UUID.randomUUID();
+
+        // When (액세스 토큰 쿠키 없이 호출)
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/reports")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                            "roomId": "%s",
+                                            "reportedMessageId": "%s",
+                                            "reason": "사내 비방 및 욕설"
+                                        }
+                                        """.formatted(mockRoomId, mockMessageId))
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.resultCode").value("401-1"))
+                .andExpect(jsonPath("$.msg").value("로그인 후 이용해주세요."));
+    }
+}

@@ -40,6 +40,7 @@ public class ReportEventListener {
             );
             reportedMessageRepository.save(reportedMsg);
         }
+
         log.info("[ReportEventListener] 비동기 대화 백업 완료 - Thread: {}", Thread.currentThread().getName());
     }
 }

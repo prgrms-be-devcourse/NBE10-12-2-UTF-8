@@ -43,7 +43,7 @@ public class ApiV1ReportController {
 
         return new RsData<>(
                 "201-1",
-                "신고가 접수되었습니다.",
+                "신고 생성 성공",
                 new ReportResponseDto(report)
         );
     }
