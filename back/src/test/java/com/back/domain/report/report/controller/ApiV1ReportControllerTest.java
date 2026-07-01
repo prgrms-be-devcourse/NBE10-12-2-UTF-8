@@ -9,6 +9,7 @@ import com.back.domain.chat.chatRoomParticipant.entity.ChatRoomParticipant;
 import com.back.domain.chat.chatRoomParticipant.repository.ChatRoomParticipantRepository;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.service.MemberService;
+import com.back.domain.report.report.entity.Report;
 import com.back.domain.report.report.repository.ReportRepository;
 import com.back.domain.report.report.repository.ReportedMessageRepository;
 import jakarta.servlet.http.Cookie;
@@ -249,5 +250,84 @@ public class ApiV1ReportControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.resultCode").value("401-1"))
                 .andExpect(jsonPath("$.msg").value("로그인 후 이용해주세요."));
+    }
+
+    @Test
+    @DisplayName("자신이 작성한 메시지 신고 시도 시 실패")
+    void t5() throws Exception {
+        // Given
+        Member reporter = memberService.join("reporter5@test.com", "1234", "IT", "USER");
+        createdMembers.add(reporter);
+        String accessToken = memberService.genAccessToken(reporter);
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        UUID roomId = chatRoom.getId();
+        ChatRoomParticipant p1 = chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, reporter, "익명의 동료"));
+        // 본인이 작성한 메시지
+        ChatMessage ownMessage = chatMessageRepository.save(new ChatMessage(chatRoom, p1, "내가 쓴 부적절한 글"));
+        UUID reportedMessageId = ownMessage.getId();
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+        TestTransaction.start();
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/reports")
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                            "roomId": "%s",
+                                            "reportedMessageId": "%s",
+                                            "reason": "장난 신고"
+                                        }
+                                        """.formatted(roomId, reportedMessageId))
+                )
+                .andDo(print());
+        // Then
+        resultActions
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400-1"))
+                .andExpect(jsonPath("$.msg").value("자신을 신고할 수 없습니다."));
+    }
+    @Test
+    @DisplayName("동일한 메시지 중복 신고 시도 시 실패")
+    void t6() throws Exception {
+        // Given
+        Member reporter = memberService.join("reporter6@test.com", "1234", "IT", "USER");
+        Member reported = memberService.join("reported6@test.com", "1234", "IT", "USER");
+        createdMembers.add(reporter);
+        createdMembers.add(reported);
+        String accessToken = memberService.genAccessToken(reporter);
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        UUID roomId = chatRoom.getId();
+        ChatRoomParticipant p1 = chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, reporter, "익명1"));
+        ChatRoomParticipant p2 = chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, reported, "익명2"));
+        ChatMessage targetMessage = chatMessageRepository.save(new ChatMessage(chatRoom, p2, "중복 신고해봐라"));
+        UUID reportedMessageId = targetMessage.getId();
+        // 1차 신고 접수 (DB에 적재하기 위해 Given 단계에서 직접 등록 처리)
+        reportRepository.save(new Report(reporter, reported, chatRoom, reportedMessageId, "1차 신고"));
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+        TestTransaction.start();
+        // When (2차 중복 신고 요청)
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/reports")
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                            "roomId": "%s",
+                                            "reportedMessageId": "%s",
+                                            "reason": "2차 중복 신고"
+                                        }
+                                        """.formatted(roomId, reportedMessageId))
+                )
+                .andDo(print());
+        // Then
+        resultActions
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400-2"))
+                .andExpect(jsonPath("$.msg").value("이미 신고된 메시지입니다."));
     }
 }

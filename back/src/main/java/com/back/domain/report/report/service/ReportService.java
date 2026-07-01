@@ -9,6 +9,7 @@ import com.back.domain.member.member.entity.Member;
 import com.back.domain.report.report.entity.Report;
 import com.back.domain.report.report.event.ReportCreatedEvent;
 import com.back.domain.report.report.repository.ReportRepository;
+import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -42,10 +43,20 @@ public class ReportService {
         ChatRoomParticipant participant = targetMessage.getParticipant();
         Member reported = participant.getMember();
 
-        // 4. 신고(Report) 객체 생성 및 저장
+        // 4. 자기 자신 신고 금지 차단
+        if (reporter.getId().equals(reported.getId())) {
+            throw new ServiceException("400-1", "자신을 신고할 수 없습니다.");
+        }
+
+        // 5. 동일 메시지 중복 신고 차단
+        if (reportRepository.existsByReporterAndReportedMessageId(reporter, reportedMessageId)) {
+            throw new ServiceException("400-2", "이미 신고된 메시지입니다.");
+        }
+
+        // 6. 신고(Report) 객체 생성 및 저장
         Report report = reportRepository.save(new Report(reporter, reported, room, reportedMessageId, reason));
 
-        // 5. 비동기 이벤트 발행
+        // 7. 비동기 이벤트 발행 (엔티티 대신 식별자 ID만 전달하도록 수정)
         eventPublisher.publishEvent(new ReportCreatedEvent(report.getId(), room.getId(), reportedMessageId));
 
         log.info("[ReportService] 신고 접수 완료 - Thread: {}", Thread.currentThread().getName());
