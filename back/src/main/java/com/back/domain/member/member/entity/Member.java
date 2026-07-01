@@ -22,7 +22,6 @@ public class Member extends BaseEntity {
     @Column(unique = true)
     private String email;
     private String password;
-    @Convert(converter = IndustryConverter.class)
     private Industry industry;
     private String role; // "USER", "ADMIN"
     private boolean isSuspended;

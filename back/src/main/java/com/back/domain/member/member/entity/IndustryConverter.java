@@ -3,7 +3,7 @@ package com.back.domain.member.member.entity;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
-@Converter(autoApply = false)
+@Converter(autoApply = true)
 public class IndustryConverter implements AttributeConverter<Industry, String> {
     @Override
     public String convertToDatabaseColumn(Industry attribute) {

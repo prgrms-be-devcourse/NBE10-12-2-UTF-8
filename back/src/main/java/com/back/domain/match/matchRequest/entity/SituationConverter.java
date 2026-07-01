@@ -3,7 +3,7 @@ package com.back.domain.match.matchRequest.entity;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
-@Converter(autoApply = false)
+@Converter(autoApply = true)
 public class SituationConverter implements AttributeConverter<Situation, String> {
     @Override
     public String convertToDatabaseColumn(Situation attribute) {

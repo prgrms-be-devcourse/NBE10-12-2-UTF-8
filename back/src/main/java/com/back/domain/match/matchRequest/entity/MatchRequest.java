@@ -23,9 +23,7 @@ public class MatchRequest extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id")
     private ChatRoom room;
-    @Convert(converter = IndustryConverter.class)
     private Industry industry;
-    @Convert(converter = SituationConverter.class)
     private Situation situation;
 
 
