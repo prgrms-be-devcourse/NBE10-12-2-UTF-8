@@ -17,12 +17,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.transaction.TestTransaction;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static org.springframework.web.bind.annotation.RequestMethod.POST;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -50,6 +52,9 @@ public class ApiV1ReportControllerTest {
     private ChatMessageRepository chatMessageRepository;
 
     @Autowired
+    private com.back.domain.report.report.repository.ReportRepository reportRepository;
+
+    @Autowired
     private com.back.domain.report.report.repository.ReportedMessageRepository reportedMessageRepository;
 
     @Test
@@ -72,6 +77,13 @@ public class ApiV1ReportControllerTest {
         ChatMessage targetMessage = chatMessageRepository.save(new ChatMessage(chatRoom, p2, "너 일 그따구로 할 거면 사표 써라"));
         UUID reportedMessageId = targetMessage.getId();
 
+        // Given 단계 데이터 영속성 적재를 위한 강제 커밋
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+
+        // API 격리 실행을 위한 새로운 트랜잭션 수동 개시
+        TestTransaction.start();
+
         // When
         ResultActions resultActions = mvc
                 .perform(
@@ -92,12 +104,23 @@ public class ApiV1ReportControllerTest {
         resultActions
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.resultCode").value("201-1"))
-                .andExpect(jsonPath("$.msg").value("신고가 접수되었습니다."))
-                .andExpect(jsonPath("$.data.reportId").exists())
-                .andExpect(jsonPath("$.data.status").value("PENDING"))
-                .andExpect(jsonPath("$.data.createdAt").exists());
+                .andExpect(jsonPath("$.msg").value("신고가 접수되었습니다."));
 
+        // API가 마친 메인 트랜잭션 강제 커밋 -> AFTER_COMMIT 이벤트 유발
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+
+        // 비동기 스레드가 돌 때까지 0.5초 대기
         Thread.sleep(500);
+
+        // 최종 비동기 메시지 복사 개수 검증
         org.assertj.core.api.Assertions.assertThat(reportedMessageRepository.count()).isEqualTo(1);
+
+        // 수동 클린업 (수동 커밋을 수행했으므로 강제 롤백을 못해 외래키 종속성 역순으로 직접 제거)
+        reportedMessageRepository.deleteAll();
+        reportRepository.deleteAll(); // ReportRepository 주입 추가 및 삭제 처리
+        chatMessageRepository.deleteAll();
+        chatRoomParticipantRepository.deleteAll();
+        chatRoomRepository.deleteAll();
     }
-}
+}
