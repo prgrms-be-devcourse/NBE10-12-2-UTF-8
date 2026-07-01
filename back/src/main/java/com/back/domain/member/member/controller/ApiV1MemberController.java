@@ -1,4 +1,7 @@
 package com.back.domain.member.member.controller;
+import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
+import com.back.domain.match.matchRequest.dto.MatchHistoryDto;
+import com.back.domain.match.matchRequest.service.MatchRequestService;
 import com.back.domain.member.member.dto.MemberDto;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.service.MemberService;
@@ -16,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -55,6 +60,7 @@ public class ApiV1MemberController {
             String refreshToken,
             int accessTokenExpiresIn
     ) {}
+
     @PostMapping("/signup")
     @Operation(summary = "회원가입")
     public RsData<MemberDto> signup(@Valid @RequestBody MemberSignupReq req) {
@@ -155,6 +161,17 @@ public class ApiV1MemberController {
         return new RsData<>(
                 "200-1",
                 "회원 삭제 성공"
+        );
+    }
+
+    @GetMapping("/me/matches")
+    @Operation(summary = "매치 기록 조회")
+    public RsData<List<MatchHistoryDto>> findMatchHistory() {
+        Member actor = rq.getActor();
+        return new RsData<>(
+                "200-1",
+                "괴거 매칭 이력 조회 성공",
+                memberService.getMatchHistory(actor)
         );
     }
 }

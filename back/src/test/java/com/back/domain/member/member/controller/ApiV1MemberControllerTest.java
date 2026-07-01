@@ -1,6 +1,8 @@
 package com.back.domain.member.member.controller;
 
+import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.service.MemberService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -304,6 +306,139 @@ public class ApiV1MemberControllerTest {
                 .andExpect(jsonPath("$.msg").value("소속 산업군 수정 성공"))
                 .andExpect(jsonPath("$.data.industry").value("금융"));
     }
+    @Test
+    @DisplayName("매칭 이력 조회 성공 - CLOSED 채팅방만 반환")
+    void t9() throws Exception {
+        // Given - 두 유저 직접 생성 후 매칭
+        Member member1 = memberService.join("history1@test.com", "1234", "IT", "USER");
+        Member member2 = memberService.join("history2@test.com", "1234", "IT", "USER");
+        String accessToken1 = memberService.genAccessToken(member1);
+        String accessToken2 = memberService.genAccessToken(member2);
+
+        mvc.perform(
+                post("/api/v1/matches")
+                        .header("Authorization", "Bearer " + accessToken1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "situation": "야근 중" }
+                                """)
+        );
+
+        String matchResponse = mvc.perform(
+                post("/api/v1/matches")
+                        .header("Authorization", "Bearer " + accessToken2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "situation": "야근 중" }
+                                """)
+        ).andReturn().getResponse().getContentAsString();
+
+        String matchRequestId = new ObjectMapper().readTree(matchResponse).path("data").path("matchRequestId").asText();
+
+        String statusResponse = mvc.perform(
+                get("/api/v1/matches/" + matchRequestId)
+                        .header("Authorization", "Bearer " + accessToken2)
+        ).andReturn().getResponse().getContentAsString();
+
+        String roomId = new ObjectMapper().readTree(statusResponse).path("data").path("chatRoomId").asText();
+
+        // Given - 채팅방 종료
+        mvc.perform(
+                patch("/api/v1/rooms/" + roomId)
+                        .header("Authorization", "Bearer " + accessToken1)
+        );
+
+        // When
+        ResultActions resultActions = mvc.perform(
+                get("/api/v1/members/me/matches")
+                        .header("Authorization", "Bearer " + accessToken1)
+        ).andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data[0].industry").value("IT"))
+                .andExpect(jsonPath("$.data[0].situation").value("야근 중"))
+                .andExpect(jsonPath("$.data[0].status").value("CLOSED"))
+                .andExpect(jsonPath("$.data[0].matchedAt").exists());
+    }
+
+    @Test
+    @DisplayName("매칭 이력 없을 때 빈 배열 반환")
+    void t10() throws Exception {
+        // Given
+        Member member = memberService.join("history3@test.com", "1234", "IT", "USER");
+        String accessToken = memberService.genAccessToken(member);
+
+        // When
+        ResultActions resultActions = mvc.perform(
+                get("/api/v1/members/me/matches")
+                        .header("Authorization", "Bearer " + accessToken)
+        ).andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @Test
+    @DisplayName("ACTIVE 채팅방은 이력에 포함되지 않음")
+    void t11() throws Exception {
+        // Given - 매칭 후 채팅방 종료 안 함
+        Member member1 = memberService.join("history4@test.com", "1234", "IT", "USER");
+        Member member2 = memberService.join("history5@test.com", "1234", "IT", "USER");
+        String accessToken1 = memberService.genAccessToken(member1);
+        String accessToken2 = memberService.genAccessToken(member2);
+
+        mvc.perform(
+                post("/api/v1/matches")
+                        .header("Authorization", "Bearer " + accessToken1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "situation": "야근 중" }
+                                """)
+        );
+
+        mvc.perform(
+                post("/api/v1/matches")
+                        .header("Authorization", "Bearer " + accessToken2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "situation": "야근 중" }
+                                """)
+        );
+
+        // When - 채팅방 종료 없이 바로 이력 조회
+        ResultActions resultActions = mvc.perform(
+                get("/api/v1/members/me/matches")
+                        .header("Authorization", "Bearer " + accessToken1)
+        ).andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @Test
+    @DisplayName("비인증 사용자 매칭 이력 조회 시 401")
+    void t12() throws Exception {
+        // When
+        ResultActions resultActions = mvc.perform(
+                get("/api/v1/members/me/matches")
+        ).andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isUnauthorized());
+    }
+
     @Test
     @DisplayName("회원 탈퇴")
     void t8() throws Exception {

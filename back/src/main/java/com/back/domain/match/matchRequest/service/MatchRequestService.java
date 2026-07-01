@@ -1,6 +1,7 @@
 package com.back.domain.match.matchRequest.service;
 
 import com.back.domain.chat.chatRoom.entity.ChatRoom;
+import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.chat.chatRoom.service.ChatRoomService;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
@@ -85,6 +86,10 @@ public class MatchRequestService {
         List<MatchRequest> expired = matchRequestRepository
                 .findExpiredPending(MatchStatus.PENDING, expiredBefore);
         matchRequestRepository.deleteAll(expired);
+    }
+
+    public List<MatchRequest> findMatchHistoryByMember(Member member) {
+        return matchRequestRepository.findByMemberAndRoomStatus(member, ChatRoomStatus.CLOSED);
     }
 
 }
