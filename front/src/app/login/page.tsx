@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiLogin, setTokens, setAdmin } from '@/lib/api';
+import { apiLogin, setTokens, setAdmin, getRoleFromToken } from '@/lib/api';
 
 const LOGO_CHARS = [
   { c: 'T', color: '#3b7ff2' }, { c: 'a', color: '#ea4c4c' }, { c: 'n', color: '#f5b400' },
@@ -32,14 +32,14 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      if (email === 'admin' && password === 'admin') {
-        setAdmin();
-        router.replace('/admin/stats');
-        return;
-      }
       const data = await apiLogin(email, password);
       setTokens(data.accessToken, data.refreshToken);
-      router.replace('/');
+      if (getRoleFromToken(data.accessToken) === 'ADMIN') {
+        setAdmin();
+        router.replace('/admin/stats');
+      } else {
+        router.replace('/');
+      }
     } catch {
       setError('이메일 또는 비밀번호가 올바르지 않아요');
     } finally {

@@ -1,5 +1,6 @@
 package com.back.domain.match.matchRequest.repository;
 
+import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.member.member.entity.Member;
@@ -31,4 +32,11 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
             @Param("end") LocalDateTime end,
             @Param("status") MatchStatus status
     );
+
+    @Query("SELECT r FROM MatchRequest r WHERE r.status = :status AND r.requestedAt < :expiredBefore")
+    List<MatchRequest> findExpiredPending(
+            @Param("status") MatchStatus status,
+            @Param("expiredBefore") LocalDateTime expiredBefore);
+
+    List<MatchRequest> findByMemberAndRoomStatus(Member member, ChatRoomStatus status);
 }

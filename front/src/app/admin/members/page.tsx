@@ -2,21 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { apiGetAdminMembers, isAdmin, INDUSTRY_NAMES, type AdminMember } from '@/lib/api';
-
-const LOGO_CHARS = [
-  { c: 'T', color: '#3b7ff2' }, { c: 'a', color: '#ea4c4c' }, { c: 'n', color: '#f5b400' },
-  { c: 'g', color: '#3b7ff2' }, { c: 'b', color: '#34a06b' }, { c: 'i', color: '#ea4c4c' },
-  { c: 's', color: '#f5b400' }, { c: 'i', color: '#3b7ff2' }, { c: 'l', color: '#34a06b' },
-];
-function TangbisilLogo({ size = 20 }: { size?: number }) {
-  return (
-    <span style={{ fontFamily: "var(--font-baloo2), 'Baloo 2', sans-serif", fontSize: size, fontWeight: 700, lineHeight: 1, letterSpacing: '-.6px', userSelect: 'none' }}>
-      {LOGO_CHARS.map(({ c, color }, i) => <span key={i} style={{ color }}>{c}</span>)}
-    </span>
-  );
-}
+import AdminHeader from '@/components/AdminHeader';
 
 const PAGE_SIZE = 10;
 
@@ -47,14 +34,7 @@ export default function AdminMembersPage() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#fff', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
-      {/* Header */}
-      <div style={{ height: 54, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 26px', background: '#fff', borderBottom: '1px solid #ebebeb' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Link href="/" style={{ textDecoration: 'none' }}><TangbisilLogo size={20} /></Link>
-          <span style={{ fontSize: 13, color: '#5f6368', borderLeft: '1px solid #dadce0', paddingLeft: 10 }}>관리자 · 회원 목록</span>
-          <Link href="/admin/stats" style={{ fontSize: 13, color: '#3b7ff2', marginLeft: 8, textDecoration: 'none' }}>통계</Link>
-        </div>
-      </div>
+      <AdminHeader active="members" />
 
       <div style={{ flex: 1, padding: '24px 26px', overflowY: 'auto' }}>
         {/* Filters */}

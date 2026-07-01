@@ -32,4 +32,9 @@ public class ChatRoom extends BaseEntity {
         this.status = ChatRoomStatus.CLOSED;
         this.closedAt = LocalDateTime.now();
     }
+    // 테스트 전용: 24시간 휘발 스케줄러 검증을 위해 과거 종료 시각을 주입
+    public void closeAtForTest(LocalDateTime closedAt) {
+        this.status = ChatRoomStatus.CLOSED;
+        this.closedAt = closedAt;
+    }
 }
