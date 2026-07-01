@@ -72,11 +72,6 @@ public class ApiV1ReportControllerTest {
     @AfterEach
     void cleanUp() {
         if (TestTransaction.isActive()) {
-            if (TestTransaction.isFlaggedForRollback()) {
-                TestTransaction.flagForRollback();
-            } else {
-                TestTransaction.flagForCommit();
-            }
             TestTransaction.end();
         }
         TestTransaction.start();
