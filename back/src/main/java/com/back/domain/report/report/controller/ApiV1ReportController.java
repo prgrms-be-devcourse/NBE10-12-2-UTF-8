@@ -31,7 +31,6 @@ public class ApiV1ReportController {
     public RsData<ReportResponseDto> createReport(@RequestBody @Valid ReportRequestDto requestDto) {
         Member actor = rq.getActor();
         if (actor == null) {
-            // Rq를 활용한 인증 예외 처리 (Rq 내부 정책에 따라 다를 수 있으나, 일반적으로 null 시 예외 반환)
             throw new com.back.global.exception.ServiceException("401-1", "로그인 후 이용해주세요.");
         }
 

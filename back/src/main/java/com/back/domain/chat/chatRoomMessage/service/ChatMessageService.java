@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -55,5 +56,13 @@ public class ChatMessageService {
         );
 
         return new ChatRoomMessageResponseDto(message);
+    }
+
+    public ChatMessage getMessage(UUID messageId) {
+        return chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new com.back.global.exception.ServiceException("404-1", "신고 대상 메시지를 찾을 수 없습니다."));
+    }
+    public List<ChatMessage> getMessagesByRoom(UUID roomId) {
+        return chatMessageRepository.findByChatRoomIdOrderByCreatedAtDesc(roomId);
     }
 }

@@ -49,6 +49,9 @@ public class ApiV1ReportControllerTest {
     @Autowired
     private ChatMessageRepository chatMessageRepository;
 
+    @Autowired
+    private com.back.domain.report.report.repository.ReportedMessageRepository reportedMessageRepository;
+
     @Test
     @DisplayName("신고 접수 성공")
     void t1() throws Exception {
@@ -93,5 +96,8 @@ public class ApiV1ReportControllerTest {
                 .andExpect(jsonPath("$.data.reportId").exists())
                 .andExpect(jsonPath("$.data.status").value("PENDING"))
                 .andExpect(jsonPath("$.data.createdAt").exists());
+
+        Thread.sleep(500);
+        org.assertj.core.api.Assertions.assertThat(reportedMessageRepository.count()).isEqualTo(1);
     }
 }
