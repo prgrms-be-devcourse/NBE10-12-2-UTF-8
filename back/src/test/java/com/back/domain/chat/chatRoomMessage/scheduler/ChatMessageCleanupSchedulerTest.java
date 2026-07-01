@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+import static com.back.domain.member.member.entity.Industry.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ActiveProfiles("test")
@@ -33,7 +34,7 @@ public class ChatMessageCleanupSchedulerTest {
     @Test
     @DisplayName("종료 후 24시간 지난 방의 메시지는 삭제된다")
     void t1() {
-        Member member = memberService.join("cleanup1@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("cleanup1@test.com", "1234", IT, "USER");
         ChatRoom oldRoom = new ChatRoom(ChatRoomStatus.ACTIVE, 2);
         oldRoom.closeAtForTest(LocalDateTime.now().minusHours(25));
         chatRoomRepository.save(oldRoom);
@@ -49,7 +50,7 @@ public class ChatMessageCleanupSchedulerTest {
     @Test
     @DisplayName("종료 후 24시간 안 지난 방의 메시지는 유지된다")
     void t2() {
-        Member member = memberService.join("cleanup2@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("cleanup2@test.com", "1234", IT, "USER");
         ChatRoom recentRoom = new ChatRoom(ChatRoomStatus.ACTIVE, 2);
         recentRoom.closeAtForTest(LocalDateTime.now().minusHours(1));
         chatRoomRepository.save(recentRoom);

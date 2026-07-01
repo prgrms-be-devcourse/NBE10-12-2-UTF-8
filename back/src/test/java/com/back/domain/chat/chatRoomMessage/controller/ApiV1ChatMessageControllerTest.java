@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static com.back.domain.member.member.entity.Industry.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -48,7 +49,7 @@ public class ApiV1ChatMessageControllerTest {
     @DisplayName("메시지 전송 성공")
     void t1() throws Exception {
         // Given
-        Member member = memberService.join("user4@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("user4@test.com", "1234", IT, "USER");
         String accessToken = memberService.genAccessToken(member);
 
         ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
@@ -113,7 +114,7 @@ public class ApiV1ChatMessageControllerTest {
     @DisplayName("존재하지 않는 채팅방에 메시지 전송 시 실패")
     void t3() throws Exception {
         // Given
-        Member member = memberService.join("user4@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("user4@test.com", "1234", IT, "USER");
         String accessToken = memberService.genAccessToken(member);
 
         UUID nonExistentRoomId = UUID.randomUUID();
@@ -143,7 +144,7 @@ public class ApiV1ChatMessageControllerTest {
     @DisplayName("종료된 채팅방에 메시지 전송 시 실패")
     void t4() throws Exception {
         // Given
-        Member member = memberService.join("user4@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("user4@test.com", "1234", IT, "USER");
         String accessToken = memberService.genAccessToken(member);
 
         ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
@@ -177,7 +178,7 @@ public class ApiV1ChatMessageControllerTest {
     @DisplayName("빈 내용으로 메시지 전송 시 실패")
     void t5() throws Exception {
         // Given
-        Member member = memberService.join("user5@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("user5@test.com", "1234", IT, "USER");
         String accessToken = memberService.genAccessToken(member);
 
         ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
@@ -210,7 +211,7 @@ public class ApiV1ChatMessageControllerTest {
     @DisplayName("500자 초과 메시지 전송 시 실패")
     void t6() throws Exception {
         // Given
-        Member member = memberService.join("user6@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("user6@test.com", "1234", IT, "USER");
         String accessToken = memberService.genAccessToken(member);
 
         ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));

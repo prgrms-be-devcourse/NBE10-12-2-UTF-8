@@ -77,7 +77,7 @@ public class ApiV1MatchControllerTest {
     @Test
     @DisplayName("매칭 요청 생성 성공 - 상대 없을 시 PENDING")
     void t1() throws Exception {
-        String accessToken = signupAndLogin("user1@test.com", "IT");
+        String accessToken = signupAndLogin("user1@test.com", "IT/개발");
 
         ResultActions resultActions = mvc.perform(
                 post("/api/v1/matches")
@@ -102,8 +102,8 @@ public class ApiV1MatchControllerTest {
     @Test
     @DisplayName("매칭 요청 생성 성공 - industry + situation 일치 시 MATCHED")
     void t2() throws Exception {
-        String accessToken1 = signupAndLogin("user1@test.com", "IT");
-        String accessToken2 = signupAndLogin("user2@test.com", "IT");
+        String accessToken1 = signupAndLogin("user1@test.com", "IT/개발");
+        String accessToken2 = signupAndLogin("user2@test.com", "IT/개발");
 
         mvc.perform(
                 post("/api/v1/matches")
@@ -136,8 +136,8 @@ public class ApiV1MatchControllerTest {
     @Test
     @DisplayName("매칭 요청 생성 성공 - industry만 일치 시 MATCHED (2순위)")
     void t3() throws Exception {
-        String accessToken1 = signupAndLogin("user1@test.com", "IT");
-        String accessToken2 = signupAndLogin("user2@test.com", "IT");
+        String accessToken1 = signupAndLogin("user1@test.com", "IT/개발");
+        String accessToken2 = signupAndLogin("user2@test.com", "IT/개발");
 
         mvc.perform(
                 post("/api/v1/matches")
@@ -170,7 +170,7 @@ public class ApiV1MatchControllerTest {
     @Test
     @DisplayName("이미 진행 중인 매칭 요청이 있을 시 409")
     void t4() throws Exception {
-        String accessToken = signupAndLogin("user1@test.com", "IT");
+        String accessToken = signupAndLogin("user1@test.com", "IT/개발");
 
         mvc.perform(
                 post("/api/v1/matches")
@@ -220,7 +220,7 @@ public class ApiV1MatchControllerTest {
     @Test
     @DisplayName("situation 없이 매칭 요청 시 400")
     void t6() throws Exception {
-        String accessToken = signupAndLogin("user1@test.com", "IT");
+        String accessToken = signupAndLogin("user1@test.com", "IT/개발");
 
         ResultActions resultActions = mvc.perform(
                 post("/api/v1/matches")
@@ -240,7 +240,7 @@ public class ApiV1MatchControllerTest {
     @Test
     @DisplayName("매칭 상태 조회 - PENDING")
     void t7() throws Exception {
-        String accessToken = signupAndLogin("user1@test.com", "IT");
+        String accessToken = signupAndLogin("user1@test.com", "IT/개발");
 
         String createResponse = mvc.perform(
                 post("/api/v1/matches")
@@ -274,8 +274,8 @@ public class ApiV1MatchControllerTest {
     @Test
     @DisplayName("매칭 상태 조회 - MATCHED")
     void t8() throws Exception {
-        String accessToken1 = signupAndLogin("user1@test.com", "IT");
-        String accessToken2 = signupAndLogin("user2@test.com", "IT");
+        String accessToken1 = signupAndLogin("user1@test.com", "IT/개발");
+        String accessToken2 = signupAndLogin("user2@test.com", "IT/개발");
 
         mvc.perform(
                 post("/api/v1/matches")
@@ -320,7 +320,7 @@ public class ApiV1MatchControllerTest {
     @Test
     @DisplayName("존재하지 않는 matchRequestId 조회 시 404")
     void t9() throws Exception {
-        String accessToken = signupAndLogin("user1@test.com", "IT");
+        String accessToken = signupAndLogin("user1@test.com", "IT/개발");
 
         ResultActions resultActions = mvc.perform(
                 get("/api/v1/matches/" + java.util.UUID.randomUUID())
@@ -336,7 +336,7 @@ public class ApiV1MatchControllerTest {
     @Test
     @DisplayName("매칭 취소 성공")
     void t10() throws Exception {
-        String accessToken = signupAndLogin("user1@test.com", "IT");
+        String accessToken = signupAndLogin("user1@test.com", "IT/개발");
 
         String createResponse = mvc.perform(
                 post("/api/v1/matches")
@@ -369,8 +369,8 @@ public class ApiV1MatchControllerTest {
     @Test
     @DisplayName("MATCHED 상태 매칭 취소 시 409")
     void t11() throws Exception {
-        String accessToken1 = signupAndLogin("user1@test.com", "IT");
-        String accessToken2 = signupAndLogin("user2@test.com", "IT");
+        String accessToken1 = signupAndLogin("user1@test.com", "IT/개발");
+        String accessToken2 = signupAndLogin("user2@test.com", "IT/개발");
 
         mvc.perform(
                 post("/api/v1/matches")
@@ -414,7 +414,7 @@ public class ApiV1MatchControllerTest {
     @Test
     @DisplayName("존재하지 않는 matchRequestId 취소 시 404")
     void t12() throws Exception {
-        String accessToken = signupAndLogin("user1@test.com", "IT");
+        String accessToken = signupAndLogin("user1@test.com", "IT/개발");
 
         ResultActions resultActions = mvc.perform(
                 delete("/api/v1/matches/" + java.util.UUID.randomUUID())
