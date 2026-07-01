@@ -420,6 +420,22 @@ public class ApiV1ChatMessageControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("401-1"));
     }
 
+    @Test
+    @DisplayName("메시지 폴링 - 참여자 아닌 사용자 403")
+    void t14() throws Exception {
+        Member owner = memberService.join("owner@test.com", "1234", "IT", "USER");
+        Member outsider = memberService.join("outsider@test.com", "1234", "IT", "USER");
+        String outsiderToken = memberService.genAccessToken(outsider);
 
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, owner, "익명의 동료"));
 
+        ResultActions result = mvc.perform(
+                        get("/api/v1/rooms/" + chatRoom.getId() + "/messages")
+                                .cookie(new Cookie("accessToken", outsiderToken)))
+                .andDo(print());
+
+        result.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.resultCode").value("403-1"));
+    }
 }
