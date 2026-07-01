@@ -59,20 +59,25 @@ public class ApiV1ChatMessageController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)LocalDateTime after
             ) {
         Member actor = rq.getActor();
-        if(actor == null) {
+        if (actor == null) {
             throw new ServiceException("401-1", "인증이 필요합니다.");
         }
-        List<ChatRoomMessageResponseDto> messages = chatMessageService.getMessages(roomId, actor, after);
 
-        if(messages == null) {
-            return new RsData<>("200-3", "종료된 채팅방입니다.", null);
-        }
-        if(messages.isEmpty()) {
-            return new RsData<>("200-2", "신규 메시지 없음", null);
-        }
+        try {
+            List<ChatRoomMessageResponseDto> messages = chatMessageService.getMessages(roomId, actor, after);
 
-        return new RsData<>("200-1", "메시지 목록 조회 성공", messages);
+            if (messages.isEmpty()) {
+                return new RsData<>("200-2", "신규 메시지 없음", null);
+            }
+
+            return new RsData<>("200-1", "메시지 목록 조회 성공", messages);
+
+        } catch(ServiceException e) {
+            if("200-3".equals(e.getRsData().resultCode())) {
+                return new RsData<>("200-3", "종료된 채팅방입니다.", null);
+            }
+            throw e;
+        }
     }
-
 
 }
