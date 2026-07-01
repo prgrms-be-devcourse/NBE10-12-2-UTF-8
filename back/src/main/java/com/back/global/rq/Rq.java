@@ -66,7 +66,7 @@ public class Rq {
                 .orElse(defaultValue);
     }
 
-    public void setCookie(String name, String value) {
+    public void setCookie(String name, String value, int maxAge) {
         if (value == null) value = "";
 
         Cookie cookie = new Cookie(name, value);
@@ -78,9 +78,13 @@ public class Rq {
         cookie.setAttribute("SameSite", "Strict");
 
         if (value.isBlank()) cookie.setMaxAge(0);
-        else cookie.setMaxAge(60 * 60 * 24 * 365);
+        else cookie.setMaxAge(maxAge);
 
         resp.addCookie(cookie);
+    }
+
+    public void setCookie(String name, String value) {
+        setCookie(name, value, 60 * 60 * 24 * 365);
     }
 
     public void deleteCookie(String name) {
