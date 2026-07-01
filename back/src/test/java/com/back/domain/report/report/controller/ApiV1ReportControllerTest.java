@@ -8,8 +8,10 @@ import com.back.domain.chat.chatRoomMessage.repository.ChatMessageRepository;
 import com.back.domain.chat.chatRoomParticipant.entity.ChatRoomParticipant;
 import com.back.domain.chat.chatRoomParticipant.repository.ChatRoomParticipantRepository;
 import com.back.domain.member.member.entity.Member;
+import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.service.MemberService;
 import com.back.domain.report.report.entity.Report;
+import com.back.domain.report.report.entity.ReportedMessage;
 import com.back.domain.report.report.repository.ReportRepository;
 import com.back.domain.report.report.repository.ReportedMessageRepository;
 import jakarta.servlet.http.Cookie;
@@ -28,6 +30,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
 import java.util.List;
@@ -91,8 +94,8 @@ public class ApiV1ReportControllerTest {
     void t1() throws Exception {
         // Given
         // 1. 신고자와 피신고자 회원가입 및 토큰 발급
-        Member reporter = memberService.join("reporter@test.com", "1234", "IT", "USER");
-        Member reported = memberService.join("reported@test.com", "1234", "IT", "USER");
+        Member reporter = memberService.join("reporter@test.com", "1234", Industry.IT, "USER");
+        Member reported = memberService.join("reported@test.com", "1234", Industry.IT, "USER");
         createdMembers.add(reporter);
         createdMembers.add(reported);
         String accessToken = memberService.genAccessToken(reporter);
@@ -145,7 +148,7 @@ public class ApiV1ReportControllerTest {
         await()
                 .atMost(2, SECONDS)
                 .untilAsserted(() ->
-                        org.assertj.core.api.Assertions.assertThat(reportedMessageRepository.count()).isEqualTo(1)
+                        assertThat(reportedMessageRepository.count()).isEqualTo(1)
                 );
     }
 
@@ -153,7 +156,7 @@ public class ApiV1ReportControllerTest {
     @DisplayName("존재하지 않는 채팅방 ID로 신고 시 실패")
     void t2() throws Exception {
         // Given
-        Member reporter = memberService.join("reporter2@test.com", "1234", "IT", "USER");
+        Member reporter = memberService.join("reporter2@test.com", "1234", Industry.IT, "USER");
         createdMembers.add(reporter);
         String accessToken = memberService.genAccessToken(reporter);
         UUID nonExistentRoomId = UUID.randomUUID();
@@ -186,7 +189,7 @@ public class ApiV1ReportControllerTest {
     @DisplayName("존재하지 않는 메시지 ID로 신고 시 실패")
     void t3() throws Exception {
         // Given
-        Member reporter = memberService.join("reporter3@test.com", "1234", "IT", "USER");
+        Member reporter = memberService.join("reporter3@test.com", "1234", Industry.IT, "USER");
         createdMembers.add(reporter);
         String accessToken = memberService.genAccessToken(reporter);
 
@@ -251,7 +254,7 @@ public class ApiV1ReportControllerTest {
     @DisplayName("자신이 작성한 메시지 신고 시도 시 실패")
     void t5() throws Exception {
         // Given
-        Member reporter = memberService.join("reporter5@test.com", "1234", "IT", "USER");
+        Member reporter = memberService.join("reporter5@test.com", "1234", Industry.IT, "USER");
         createdMembers.add(reporter);
         String accessToken = memberService.genAccessToken(reporter);
         ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
@@ -288,8 +291,8 @@ public class ApiV1ReportControllerTest {
     @DisplayName("동일한 메시지 중복 신고 시도 시 실패")
     void t6() throws Exception {
         // Given
-        Member reporter = memberService.join("reporter6@test.com", "1234", "IT", "USER");
-        Member reported = memberService.join("reported6@test.com", "1234", "IT", "USER");
+        Member reporter = memberService.join("reporter6@test.com", "1234", Industry.IT, "USER");
+        Member reported = memberService.join("reported6@test.com", "1234", Industry.IT, "USER");
         createdMembers.add(reporter);
         createdMembers.add(reported);
         String accessToken = memberService.genAccessToken(reporter);
@@ -324,5 +327,85 @@ public class ApiV1ReportControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.resultCode").value("400-2"))
                 .andExpect(jsonPath("$.msg").value("이미 신고된 메시지입니다."));
+    }
+
+    @Test
+    @DisplayName("신고 유발 메시지 기준 이전 대화 최대 30개만 제한 백업 검증")
+    void t7() throws Exception {
+        // Given
+        Member reporter = memberService.join("reporter7@test.com", "1234", Industry.IT, "USER");
+        Member reported = memberService.join("reported7@test.com", "1234", Industry.IT, "USER");
+        createdMembers.add(reporter);
+        createdMembers.add(reported);
+        String accessToken = memberService.genAccessToken(reporter);
+
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        UUID roomId = chatRoom.getId();
+
+        ChatRoomParticipant p1 = chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, reporter, "익명1"));
+        ChatRoomParticipant p2 = chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, reported, "익명2"));
+
+        // 💡 1부터 35까지 총 35개의 메시지를 순서대로 생성하여 DB 적재 (시차 분리를 위해 10ms 딜레이 부여)
+        List<ChatMessage> messages = new ArrayList<>();
+        for (int i = 1; i <= 35; i++) {
+            messages.add(chatMessageRepository.save(
+                    new ChatMessage(chatRoom, p2, "부적절한 메시지 내용 " + i)
+            ));
+            Thread.sleep(10);
+        }
+
+        // 32번째 메시지(인덱스 31)를 신고 대상 메시지로 선정
+        ChatMessage targetMessage = messages.get(31);
+        UUID reportedMessageId = targetMessage.getId();
+
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+        TestTransaction.start();
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/reports")
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                            "roomId": "%s",
+                                            "reportedMessageId": "%s",
+                                            "reason": "30개 한계선 테스트"
+                                        }
+                                        """.formatted(roomId, reportedMessageId))
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.resultCode").value("201-1"))
+                .andExpect(jsonPath("$.msg").value("신고 생성 성공"));
+
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+
+        // [검증] Awaitility를 사용하여 최대 30개 제한 정책이 작동하는지 체크
+        await()
+                .atMost(2, SECONDS)
+                .untilAsserted(() -> {
+                    // 1. 신고 메시지 이전의 32개 대화 중 최대 30개만 복사되어 백업되었는지 검증
+                    long count = reportedMessageRepository.count();
+                    assertThat(count).isEqualTo(30);
+
+                    // 2. 신고된 32번째 메시지(Target)가 정상적으로 수집 목록에 포함되어 isTarget=true로 저장되었는지 검증
+                    List<ReportedMessage> savedList = reportedMessageRepository.findAll();
+                    boolean hasTarget = savedList.stream()
+                            .anyMatch(msg -> msg.isTarget() && msg.getContent().contains("부적절한 메시지 내용 32"));
+                    assertThat(hasTarget).isTrue();
+
+                    // 3. 신고 대상 메시지보다 나중에 작성된 33~35번째 메시지는 백업 대상에서 배제되었는지 검증
+                    boolean hasLaterMessage = savedList.stream()
+                            .anyMatch(msg -> msg.getContent().contains("부적절한 메시지 내용 33")
+                                    || msg.getContent().contains("부적절한 메시지 내용 35"));
+                    assertThat(hasLaterMessage).isFalse();
+                });
     }
 }

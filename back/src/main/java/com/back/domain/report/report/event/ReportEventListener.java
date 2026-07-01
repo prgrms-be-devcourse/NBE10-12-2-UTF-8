@@ -36,7 +36,8 @@ public class ReportEventListener {
             Report report = reportRepository.findById(event.reportId())
                     .orElseThrow(() -> new IllegalArgumentException("신고 정보를 찾을 수 없습니다. ID: " + event.reportId()));
 
-            List<ChatMessage> roomMessages = chatMessageService.getMessagesByRoom(event.roomId());
+            // 신고 유발 메시지 기점 이전 30개의 대화만 핀포인트로 조회해 오도록 연동
+            List<ChatMessage> roomMessages = chatMessageService.getMessagesBeforeTarget(event.roomId(), event.targetMessageId());
 
             List<ReportedMessage> reportedMessages = roomMessages.stream()
                     .map(msg -> new ReportedMessage(

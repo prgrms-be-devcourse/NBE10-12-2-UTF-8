@@ -24,4 +24,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
     int deleteMessagesInRoomsClosedBefore(@Param("threshold") LocalDateTime threshold);
 
     List<ChatMessage> findByChatRoomIdOrderByCreatedAtDesc(UUID id);
+
+    // 신고 메시지 작성일시(createdAt) 기준 그 이전의 대화들을 최근 순서(DESC)로 최대 30개만 제한 조회
+    List<ChatMessage> findTop30ByChatRoomIdAndCreatedAtLessThanEqualOrderByCreatedAtDesc(UUID chatRoomId, LocalDateTime createdAt);
 }
