@@ -1,9 +1,12 @@
 package com.back.domain.member.member.entity;
 
-import com.fasterxml.jackson.annotation.JsonValue;
 import com.back.global.exception.ServiceException;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 import java.util.Arrays;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 // 테크스펙 FR-02 산업군 목록과 반드시 동기화해야 함
 public enum Industry {
@@ -26,15 +29,15 @@ public enum Industry {
         return label;
     }
 
-    @com.fasterxml.jackson.annotation.JsonCreator
-    public static Industry fromLabel(String label) {
-        return Arrays.stream(values())
-                .filter(i -> i.label.equals(label))
-                .findFirst()
-                .orElseThrow(() -> new ServiceException("400-1", "허용되지 않는 산업군입니다."));
-    }
+    private static final Map<String, Industry> LABEL_MAP =
+            Arrays.stream(values()).collect(Collectors.toMap(i -> i.label, i -> i));
 
-    public static boolean isValid(String label) {
-        return Arrays.stream(values()).anyMatch(i -> i.label.equals(label));
+    @JsonCreator
+    public static Industry fromLabel(String label) {
+        Industry result = LABEL_MAP.get(label);
+        if (result == null) {
+            throw new ServiceException("400-1", "허용되지 않는 산업군입니다.");
+        }
+        return result;
     }
 }

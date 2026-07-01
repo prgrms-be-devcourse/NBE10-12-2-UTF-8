@@ -27,6 +27,9 @@ public class MatchRequestService {
 
     @Transactional
     public MatchRequest create(Member member, Situation situation) {
+        if (member.getIndustry() == null) {
+            throw new ServiceException("400-2", "산업군이 설정되지 않은 계정은 매칭을 요청할 수 없습니다.");
+        }
         if (matchRequestRepository.existsByMemberAndStatus(member, MatchStatus.PENDING)) {
             throw new ServiceException("409-1", "이미 진행 중인 매칭 요청이 있습니다.");
         }

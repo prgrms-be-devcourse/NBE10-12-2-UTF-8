@@ -81,6 +81,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<RsData<Void>> handle(HttpMessageNotReadableException ex) {
+        // Jackson이 @JsonCreator에서 던진 예외(예: enum 화이트리스트 검증 실패)를
+        // InvalidFormatException 등으로 감싸버리므로, cause 체인에서 ServiceException을 찾아
+        // 원래 메시지를 그대로 내려준다. 못 찾으면 기존 범용 메시지로 fallback.
+        Throwable cause = ex.getCause();
+        while (cause != null) {
+            if (cause instanceof ServiceException se) {
+                RsData<Void> rsData = se.getRsData();
+                return new ResponseEntity<>(rsData, BAD_REQUEST);
+            }
+            cause = cause.getCause();
+        }
         return new ResponseEntity<>(
                 new RsData<>(
                         "400-1",
