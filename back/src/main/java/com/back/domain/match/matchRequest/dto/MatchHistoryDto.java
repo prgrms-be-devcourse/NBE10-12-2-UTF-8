@@ -2,13 +2,15 @@ package com.back.domain.match.matchRequest.dto;
 
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
+import com.back.domain.match.matchRequest.entity.Situation;
+import com.back.domain.member.member.entity.Industry;
 
 import java.time.LocalDateTime;
 
 public record MatchHistoryDto(
         LocalDateTime matchedAt,
-        String industry,
-        String situation,
+        Industry industry,
+        Situation situation,
         ChatRoomStatus status
 ) {
     public MatchHistoryDto(MatchRequest matchRequest) {

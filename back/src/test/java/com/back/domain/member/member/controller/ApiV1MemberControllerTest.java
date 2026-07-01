@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static com.back.domain.member.member.entity.Industry.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -46,7 +47,7 @@ public class ApiV1MemberControllerTest {
                                         {
                                              "email": "test@test.com",
                                              "password": "1234",
-                                             "industry": "IT"
+                                             "industry": "IT/개발"
                                         }
                                         """)
                 )
@@ -59,7 +60,7 @@ public class ApiV1MemberControllerTest {
                 .andExpect(jsonPath("$.msg").value("회원 생성 성공"))
                 .andExpect(jsonPath("$.data.id").exists())
                 .andExpect(jsonPath("$.data.email").value("test@test.com"))
-                .andExpect(jsonPath("$.data.industry").value("IT"));
+                .andExpect(jsonPath("$.data.industry").value("IT/개발"));
     }
 
     @Test
@@ -73,7 +74,7 @@ public class ApiV1MemberControllerTest {
                                 {
                                      "email": "test@test.com",
                                      "password": "1234",
-                                     "industry": "IT"
+                                     "industry": "IT/개발"
                                 }
                                 """)
         );
@@ -115,7 +116,7 @@ public class ApiV1MemberControllerTest {
                                         {
                                              "email": "invalid-email-format",
                                              "password": "1234",
-                                             "industry": "IT"
+                                             "industry": "IT/개발"
                                         }
                                         """)
                 )
@@ -158,7 +159,7 @@ public class ApiV1MemberControllerTest {
                             {
                                  "email": "test@test.com",
                                  "password": "1234",
-                                 "industry": "IT"
+                                 "industry": "IT/개발"
                             }
                             """)
         );
@@ -209,7 +210,7 @@ public class ApiV1MemberControllerTest {
                             {
                                  "email": "test@test.com",
                                  "password": "1234",
-                                 "industry": "IT"
+                                 "industry": "IT/개발"
                             }
                             """)
         );
@@ -249,7 +250,7 @@ public class ApiV1MemberControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
                 .andExpect(jsonPath("$.msg").value("내 정보 조회 성공"))
                 .andExpect(jsonPath("$.data.email").value("test@test.com"))
-                .andExpect(jsonPath("$.data.industry").value("IT"));
+                .andExpect(jsonPath("$.data.industry").value("IT/개발"));
     }
     @Test
     @DisplayName("산업군 수정")
@@ -262,7 +263,7 @@ public class ApiV1MemberControllerTest {
                             {
                                  "email": "test@test.com",
                                  "password": "1234",
-                                 "industry": "IT"
+                                 "industry": "IT/개발"
                             }
                             """)
         );
@@ -296,7 +297,7 @@ public class ApiV1MemberControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                     {
-                                         "industry": "금융"
+                                         "industry": "금융업"
                                     }
                                     """)
                 )
@@ -307,14 +308,14 @@ public class ApiV1MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
                 .andExpect(jsonPath("$.msg").value("소속 산업군 수정 성공"))
-                .andExpect(jsonPath("$.data.industry").value("금융"));
+                .andExpect(jsonPath("$.data.industry").value("금융업"));
     }
     @Test
     @DisplayName("매칭 이력 조회 성공 - CLOSED 채팅방만 반환")
     void t9() throws Exception {
         // Given - 두 유저 직접 생성 후 매칭
-        Member member1 = memberService.join("history1@test.com", "1234", "IT", "USER");
-        Member member2 = memberService.join("history2@test.com", "1234", "IT", "USER");
+        Member member1 = memberService.join("history1@test.com", "1234", IT, "USER");
+        Member member2 = memberService.join("history2@test.com", "1234", IT, "USER");
         String accessToken1 = memberService.genAccessToken(member1);
         String accessToken2 = memberService.genAccessToken(member2);
 
@@ -362,7 +363,7 @@ public class ApiV1MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
                 .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data[0].industry").value("IT"))
+                .andExpect(jsonPath("$.data[0].industry").value("IT/개발"))
                 .andExpect(jsonPath("$.data[0].situation").value("야근 중"))
                 .andExpect(jsonPath("$.data[0].status").value("CLOSED"))
                 .andExpect(jsonPath("$.data[0].matchedAt").exists());
@@ -372,7 +373,7 @@ public class ApiV1MemberControllerTest {
     @DisplayName("매칭 이력 없을 때 빈 배열 반환")
     void t10() throws Exception {
         // Given
-        Member member = memberService.join("history3@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("history3@test.com", "1234", IT, "USER");
         String accessToken = memberService.genAccessToken(member);
 
         // When
@@ -393,8 +394,8 @@ public class ApiV1MemberControllerTest {
     @DisplayName("ACTIVE 채팅방은 이력에 포함되지 않음")
     void t11() throws Exception {
         // Given - 매칭 후 채팅방 종료 안 함
-        Member member1 = memberService.join("history4@test.com", "1234", "IT", "USER");
-        Member member2 = memberService.join("history5@test.com", "1234", "IT", "USER");
+        Member member1 = memberService.join("history4@test.com", "1234", IT, "USER");
+        Member member2 = memberService.join("history5@test.com", "1234", IT, "USER");
         String accessToken1 = memberService.genAccessToken(member1);
         String accessToken2 = memberService.genAccessToken(member2);
 
@@ -453,7 +454,7 @@ public class ApiV1MemberControllerTest {
                             {
                                  "email": "test@test.com",
                                  "password": "1234",
-                                 "industry": "IT"
+                                 "industry": "IT/개발"
                             }
                             """)
         );
@@ -500,7 +501,7 @@ public class ApiV1MemberControllerTest {
         Member member = memberService.join(
                 "refresh@test.com",
                 "1234",
-                "IT",
+                IT,
                 "USER"
         );
 

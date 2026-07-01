@@ -2,6 +2,7 @@ package com.back.domain.member.member.entity;
 
 import com.back.global.jpa.entity.BaseEntity;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,7 +22,8 @@ public class Member extends BaseEntity {
     @Column(unique = true)
     private String email;
     private String password;
-    private String industry;
+    @Convert(converter = IndustryConverter.class)
+    private Industry industry;
     private String role; // "USER", "ADMIN"
     private boolean isSuspended;
     @Column(unique = true)
@@ -34,7 +36,7 @@ public class Member extends BaseEntity {
         this.role = role;
     }
 
-    public Member(String email, String password, String industry, String role) {
+    public Member(String email, String password, Industry industry, String role) {
         this.email = email;
         this.password = password;
         this.industry = industry;
@@ -58,7 +60,7 @@ public class Member extends BaseEntity {
         authorities.add(new SimpleGrantedAuthority("ROLE_" + this.role));
         return authorities;
     }
-    public void updateIndustry(String industry) {
+    public void updateIndustry(Industry industry) {
         this.industry = industry;
     }
 }

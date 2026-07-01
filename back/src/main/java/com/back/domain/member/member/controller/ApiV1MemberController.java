@@ -1,8 +1,7 @@
 package com.back.domain.member.member.controller;
-import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.match.matchRequest.dto.MatchHistoryDto;
-import com.back.domain.match.matchRequest.service.MatchRequestService;
 import com.back.domain.member.member.dto.MemberDto;
+import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.service.MemberService;
 import com.back.global.exception.ServiceException;
@@ -14,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,9 +43,8 @@ public class ApiV1MemberController {
             @NotBlank
             @Size(min = 4, max = 30)
             String password,
-            @NotBlank
-            @Size(min = 2, max = 30)
-            String industry
+            @NotNull
+            Industry industry
     ) {}
     public record MemberLoginReq(
             @NotBlank
@@ -119,7 +118,7 @@ public class ApiV1MemberController {
     }
     public record MemberMeRes(
             String email,
-            String industry
+            Industry industry
     ) {}
 
     @GetMapping("/me")
@@ -135,12 +134,13 @@ public class ApiV1MemberController {
         );
     }
     public record MemberUpdateIndustryReq(
-            @NotBlank
-            String industry
+            @NotNull
+            Industry industry
     ) {}
 
     public record MemberUpdateIndustryRes(
-            String industry
+            @NotNull
+            Industry industry
     ) {}
 
     @PatchMapping("/me")

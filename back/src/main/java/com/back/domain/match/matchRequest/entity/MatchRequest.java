@@ -1,6 +1,7 @@
 package com.back.domain.match.matchRequest.entity;
 
 import com.back.domain.chat.chatRoom.entity.ChatRoom;
+import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
 import com.back.global.jpa.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -21,8 +22,10 @@ public class MatchRequest extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id")
     private ChatRoom room;
-    private String industry;
-    private String situation;
+    @Convert(converter = com.back.domain.member.member.entity.IndustryConverter.class)
+    private Industry industry;
+    @Convert(converter = SituationConverter.class)
+    private Situation situation;
 
 
     @Enumerated(EnumType.STRING)
@@ -31,7 +34,7 @@ public class MatchRequest extends BaseEntity {
     private LocalDateTime requestedAt;
 
 
-    public MatchRequest(Member member, String situation) {
+    public MatchRequest(Member member, Situation situation) {
         this.member = member;
         this.industry = member.getIndustry();
         this.situation = situation;
