@@ -31,24 +31,28 @@ public class ReportEventListener {
     public void handleReportCreatedEvent(ReportCreatedEvent event) {
         log.info("[ReportEventListener] 비동기 대화 백업 시작 - Thread: {}", Thread.currentThread().getName());
 
-        // 신규 트랜잭션에서 부모 Report 엔티티를 완전히 새로 조회 (준영속 롤백 및 지연로딩 에러 방지)
-        Report report = reportRepository.findById(event.reportId())
-                .orElseThrow(() -> new IllegalArgumentException("신고 정보를 찾을 수 없습니다. ID: " + event.reportId()));
+        try {
+            // 신규 트랜잭션에서 부모 Report 엔티티를 완전히 새로 조회 (준영속 롤백 및 지연로딩 에러 방지)
+            Report report = reportRepository.findById(event.reportId())
+                    .orElseThrow(() -> new IllegalArgumentException("신고 정보를 찾을 수 없습니다. ID: " + event.reportId()));
 
-        List<ChatMessage> roomMessages = chatMessageService.getMessagesByRoom(event.roomId());
+            List<ChatMessage> roomMessages = chatMessageService.getMessagesByRoom(event.roomId());
 
-        List<ReportedMessage> reportedMessages = roomMessages.stream()
-                .map(msg -> new ReportedMessage(
-                        report,
-                        msg.getParticipant().getMember().getId(),
-                        msg.getParticipant().getNickname(),
-                        msg.getContent(),
-                        msg.getCreatedAt(),
-                        msg.getId().equals(event.targetMessageId())
-                ))
-                .toList();
-        reportedMessageRepository.saveAll(reportedMessages);
+            List<ReportedMessage> reportedMessages = roomMessages.stream()
+                    .map(msg -> new ReportedMessage(
+                            report,
+                            msg.getParticipant().getMember().getId(),
+                            msg.getParticipant().getNickname(),
+                            msg.getContent(),
+                            msg.getCreatedAt(),
+                            msg.getId().equals(event.targetMessageId())
+                    ))
+                    .toList();
+            reportedMessageRepository.saveAll(reportedMessages);
 
-        log.info("[ReportEventListener] 비동기 대화 백업 완료 - Thread: {}", Thread.currentThread().getName());
+            log.info("[ReportEventListener] 비동기 대화 백업 완료 - Thread: {}", Thread.currentThread().getName());
+        } catch (Exception e) {
+            log.error("[ReportEventListener] 대화 백업 실패 - reportId: {}", event.reportId(), e);
+        }
     }
 }
