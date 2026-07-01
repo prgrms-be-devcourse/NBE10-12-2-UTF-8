@@ -1,9 +1,10 @@
 package com.back.domain.match.matchRequest.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import com.back.domain.match.matchRequest.entity.Situation;
+import jakarta.validation.constraints.NotNull;
 
 
 public record MatchRequestDto(
-        @NotBlank
-        String situation
+        @NotNull(message = "상황을 선택해주세요.")
+        Situation situation
 ) { }

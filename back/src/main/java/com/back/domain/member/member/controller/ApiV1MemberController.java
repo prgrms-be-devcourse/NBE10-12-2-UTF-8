@@ -1,8 +1,7 @@
 package com.back.domain.member.member.controller;
-import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.match.matchRequest.dto.MatchHistoryDto;
-import com.back.domain.match.matchRequest.service.MatchRequestService;
 import com.back.domain.member.member.dto.MemberDto;
+import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.service.MemberService;
 import com.back.global.exception.ServiceException;
@@ -14,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,9 +43,8 @@ public class ApiV1MemberController {
             @NotBlank
             @Size(min = 4, max = 30)
             String password,
-            @NotBlank
-            @Size(min = 2, max = 30)
-            String industry
+            @NotNull
+            Industry industry
     ) {}
     public record MemberLoginReq(
             @NotBlank
@@ -87,7 +86,11 @@ public class ApiV1MemberController {
         UUID refreshToken = memberService.genRefreshToken(member);
 
         rq.setCookie("accessToken", accessToken, accessTokenExpirationSeconds);
-
+        rq.setCookie(
+                "refreshToken",
+                refreshToken.toString(),
+                60 * 60 * 24 * 30
+        );
         return new RsData<>(
                 "200-1",
                 "로그인 생성 성공",
@@ -95,9 +98,9 @@ public class ApiV1MemberController {
                         "Bearer",
                         accessToken,
                         refreshToken.toString(),
-                        accessTokenExpirationSeconds
-                )
+                        accessTokenExpirationSeconds)
         );
+
     }
 
     @PostMapping("/logout")
@@ -106,6 +109,7 @@ public class ApiV1MemberController {
         Member actor = rq.getActor();
         memberService.clearRefreshToken(actor);
         rq.deleteCookie("accessToken");
+        rq.deleteCookie("refreshToken");
 
         return new RsData<>(
                 "200-1",
@@ -114,7 +118,7 @@ public class ApiV1MemberController {
     }
     public record MemberMeRes(
             String email,
-            String industry
+            Industry industry
     ) {}
 
     @GetMapping("/me")
@@ -130,12 +134,13 @@ public class ApiV1MemberController {
         );
     }
     public record MemberUpdateIndustryReq(
-            @NotBlank
-            String industry
+            @NotNull
+            Industry industry
     ) {}
 
     public record MemberUpdateIndustryRes(
-            String industry
+            @NotNull
+            Industry industry
     ) {}
 
     @PatchMapping("/me")
@@ -160,6 +165,7 @@ public class ApiV1MemberController {
         Member actor = rq.getActor();
         memberService.delete(actor);
         rq.deleteCookie("accessToken");
+        rq.deleteCookie("refreshToken");
 
         return new RsData<>(
                 "200-1",
@@ -175,6 +181,43 @@ public class ApiV1MemberController {
                 "200-1",
                 "괴거 매칭 이력 조회 성공",
                 memberService.getMatchHistory(actor)
+        );
+    }
+    @PostMapping("/refresh")
+    @Operation(summary = "AccessToken 재발급")
+    public RsData<MemberLoginRes> refresh() {
+
+        String refreshTokenValue =
+                rq.getCookieValue("refreshToken", "");
+
+        if (refreshTokenValue.isBlank()) {
+            throw new ServiceException(
+                    "401-1",
+                    "RefreshToken이 존재하지 않습니다."
+            );
+        }
+
+        UUID refreshToken =
+                UUID.fromString(refreshTokenValue);
+
+        String accessToken =
+                memberService.refreshAccessToken(refreshToken);
+
+        rq.setCookie(
+                "accessToken",
+                accessToken,
+                accessTokenExpirationSeconds
+        );
+
+        return new RsData<>(
+                "200-1",
+                "AccessToken 재발급 성공",
+                new MemberLoginRes(
+                        "Bearer",
+                        accessToken,
+                        refreshTokenValue,
+                        accessTokenExpirationSeconds
+                )
         );
     }
 }

@@ -2,6 +2,7 @@ package com.back.domain.member.member.service;
 
 import com.back.domain.match.matchRequest.dto.MatchHistoryDto;
 import com.back.domain.match.matchRequest.service.MatchRequestService;
+import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.repository.MemberRepository;
 import com.back.global.exception.ServiceException;
@@ -12,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,7 +34,7 @@ public class MemberService {
     }
 
     @Transactional
-    public Member join(String email, String password, String industry, String role) {
+    public Member join(String email, String password, Industry industry, String role) {
         findByEmail(email).ifPresent(_ -> {
             throw new ServiceException("409-1", "이미 존재하는 이메일입니다.");
         });
@@ -62,6 +64,18 @@ public class MemberService {
         member.updateRefreshToken(token);
         return token;
     }
+    public String refreshAccessToken(UUID refreshToken) {
+        Member member = memberRepository.findByRefreshToken(refreshToken)
+                .orElseThrow(() ->
+                        new ServiceException("401-1", "유효하지 않은 RefreshToken 입니다."));
+
+        if (member.getRefreshTokenExpiresAt() == null ||
+                member.getRefreshTokenExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ServiceException("401-2", "RefreshToken이 만료되었습니다.");
+        }
+
+        return genAccessToken(member);
+    }
 
     public Map<String, Object> payload(String accessToken) {
         return authTokenService.payload(accessToken);
@@ -82,7 +96,7 @@ public class MemberService {
     }
 
     @Transactional
-    public void updateIndustry(Member member, String industry) {
+    public void updateIndustry(Member member, Industry industry) {
         Member findMember = memberRepository.findById(member.getId())
                 .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
         findMember.updateIndustry(industry);

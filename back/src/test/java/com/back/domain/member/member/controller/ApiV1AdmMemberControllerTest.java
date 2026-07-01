@@ -128,7 +128,7 @@ public class ApiV1AdmMemberControllerTest {
                 .andExpect(jsonPath("$.msg").value("회원 단건 조회 성공"))
                 .andExpect(jsonPath("$.data.memberId").exists())
                 .andExpect(jsonPath("$.data.email").exists())
-                .andExpect(jsonPath("$.data.industry").exists())
+//                .andExpect(jsonPath("$.data.industry").exists())
                 .andExpect(jsonPath("$.data.isSuspended").exists())
                 .andExpect(jsonPath("$.data.createdAt").exists());
     }

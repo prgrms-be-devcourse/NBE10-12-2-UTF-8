@@ -1,5 +1,6 @@
 package com.back.domain.member.member.dto;
 
+import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
 
 import java.time.LocalDateTime;
@@ -7,7 +8,7 @@ import java.time.LocalDateTime;
 public record MemberAdmDto(
         String memberId,
         String email,
-        String industry,
+        Industry industry,
         boolean isSuspended,
         LocalDateTime createdAt
 ) {

@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+import static com.back.domain.match.matchRequest.entity.Situation.*;
+import static com.back.domain.member.member.entity.Industry.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ActiveProfiles("test")
@@ -32,11 +34,11 @@ public class MatchSchedulerTest {
     private MemberRepository memberRepository;
 
     private Member createMember(String email) {
-        return memberRepository.save(new Member(email, "1234", "IT", "USER"));
+        return memberRepository.save(new Member(email, "1234", IT, "USER"));
     }
 
     private MatchRequest createPendingRequest(Member member, LocalDateTime requestedAt) {
-        MatchRequest matchRequest = matchRequestRepository.save(new MatchRequest(member, "야근 중"));
+        MatchRequest matchRequest = matchRequestRepository.save(new MatchRequest(member, NIGHT_WORK));
         ReflectionTestUtils.setField(matchRequest, "requestedAt", requestedAt);
         return matchRequestRepository.saveAndFlush(matchRequest);
     }

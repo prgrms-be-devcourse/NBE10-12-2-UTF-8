@@ -5,7 +5,9 @@ import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.chat.chatRoom.service.ChatRoomService;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
+import com.back.domain.match.matchRequest.entity.Situation;
 import com.back.domain.match.matchRequest.repository.MatchRequestRepository;
+import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +26,10 @@ public class MatchRequestService {
     private final ChatRoomService chatRoomService;
 
     @Transactional
-    public MatchRequest create(Member member, String situation) {
+    public MatchRequest create(Member member, Situation situation) {
+        if (member.getIndustry() == null) {
+            throw new ServiceException("400-2", "산업군이 설정되지 않은 계정은 매칭을 요청할 수 없습니다.");
+        }
         if (matchRequestRepository.existsByMemberAndStatus(member, MatchStatus.PENDING)) {
             throw new ServiceException("409-1", "이미 진행 중인 매칭 요청이 있습니다.");
         }
@@ -35,8 +40,8 @@ public class MatchRequestService {
 
     @Transactional
     public void tryMatch(MatchRequest matchRequest) {
-        String industry = matchRequest.getMember().getIndustry();
-        String situation = matchRequest.getSituation();
+        Industry industry = matchRequest.getMember().getIndustry();
+        Situation situation = matchRequest.getSituation();
 
         Optional<MatchRequest> opponent = matchRequestRepository
                 .findPendingByIndustryAndSituation(industry, situation, MatchStatus.PENDING)
