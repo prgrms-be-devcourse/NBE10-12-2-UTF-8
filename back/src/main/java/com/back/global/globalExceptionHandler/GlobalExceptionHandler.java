@@ -5,6 +5,7 @@ import com.back.global.rsData.RsData;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
+@Slf4j
 @RestControllerAdvice
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
@@ -122,5 +124,31 @@ public class GlobalExceptionHandler {
         response.setStatus(rsData.statusCode());
 
         return rsData;
+    }
+    // Jackson(HttpMessageNotReadableException)뿐 아니라, JPA/Hibernate가 AttributeConverter
+    // 내부에서 던진 ServiceException을 자체 예외(예: DataAccessException 계열)로 감싸는 경우까지
+    // 대비하는 범용 fallback. 어떤 종류로 감싸이든 cause 체인에서 ServiceException을 찾아
+    // 원래 의도한 응답으로 복원하고, 못 찾으면 진짜 예상치 못한 버그이므로 500-1로 응답한다.
+    // 단, ServiceException 자체와 위에서 이미 구체적으로 처리한 예외 타입들은 더 특이적인
+    // 핸들러가 우선 매칭되므로 이 메서드까지 내려오지 않는다.
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<RsData<Void>> handle(RuntimeException ex) {
+        Throwable cause = ex;
+        while (cause != null) {
+            if (cause instanceof ServiceException se) {
+                RsData<Void> rsData = se.getRsData();
+                return new ResponseEntity<>(rsData, org.springframework.http.HttpStatusCode.valueOf(rsData.statusCode()));
+            }
+            cause = cause.getCause();
+        }
+
+        log.error("[GlobalExceptionHandler] 예상치 못한 예외 발생", ex);
+        return new ResponseEntity<>(
+                new RsData<>(
+                        "500-1",
+                        "서버 오류가 발생했습니다."
+                ),
+                org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
+        );
     }
 }
