@@ -87,7 +87,11 @@ public class ApiV1MemberController {
         UUID refreshToken = memberService.genRefreshToken(member);
 
         rq.setCookie("accessToken", accessToken, accessTokenExpirationSeconds);
-
+        rq.setCookie(
+                "refreshToken",
+                refreshToken.toString(),
+                60 * 60 * 24 * 30
+        );
         return new RsData<>(
                 "200-1",
                 "로그인 생성 성공",
@@ -95,9 +99,9 @@ public class ApiV1MemberController {
                         "Bearer",
                         accessToken,
                         refreshToken.toString(),
-                        accessTokenExpirationSeconds
-                )
+                        accessTokenExpirationSeconds)
         );
+
     }
 
     @PostMapping("/logout")
@@ -106,6 +110,7 @@ public class ApiV1MemberController {
         Member actor = rq.getActor();
         memberService.clearRefreshToken(actor);
         rq.deleteCookie("accessToken");
+        rq.deleteCookie("refreshToken");
 
         return new RsData<>(
                 "200-1",
@@ -160,6 +165,7 @@ public class ApiV1MemberController {
         Member actor = rq.getActor();
         memberService.delete(actor);
         rq.deleteCookie("accessToken");
+        rq.deleteCookie("refreshToken");
 
         return new RsData<>(
                 "200-1",
@@ -175,6 +181,43 @@ public class ApiV1MemberController {
                 "200-1",
                 "괴거 매칭 이력 조회 성공",
                 memberService.getMatchHistory(actor)
+        );
+    }
+    @PostMapping("/refresh")
+    @Operation(summary = "AccessToken 재발급")
+    public RsData<MemberLoginRes> refresh() {
+
+        String refreshTokenValue =
+                rq.getCookieValue("refreshToken", "");
+
+        if (refreshTokenValue.isBlank()) {
+            throw new ServiceException(
+                    "401-1",
+                    "RefreshToken이 존재하지 않습니다."
+            );
+        }
+
+        UUID refreshToken =
+                UUID.fromString(refreshTokenValue);
+
+        String accessToken =
+                memberService.refreshAccessToken(refreshToken);
+
+        rq.setCookie(
+                "accessToken",
+                accessToken,
+                accessTokenExpirationSeconds
+        );
+
+        return new RsData<>(
+                "200-1",
+                "AccessToken 재발급 성공",
+                new MemberLoginRes(
+                        "Bearer",
+                        accessToken,
+                        refreshTokenValue,
+                        accessTokenExpirationSeconds
+                )
         );
     }
 }

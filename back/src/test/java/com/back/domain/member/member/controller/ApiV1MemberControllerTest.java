@@ -4,6 +4,7 @@ import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.service.MemberService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
+
+import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -489,5 +492,66 @@ public class ApiV1MemberControllerTest {
                 .andExpect(status().isNoContent())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
                 .andExpect(jsonPath("$.msg").value("회원 삭제 성공"));
+    }
+    @Test
+    @DisplayName("AccessToken 재발급 성공")
+    void t13() throws Exception {
+        // given
+        Member member = memberService.join(
+                "refresh@test.com",
+                "1234",
+                "IT",
+                "USER"
+        );
+
+        UUID refreshToken = memberService.genRefreshToken(member);
+
+        Cookie cookie = new Cookie(
+                "refreshToken",
+                refreshToken.toString()
+        );
+
+        // when
+        ResultActions resultActions = mvc.perform(
+                post("/api/v1/members/refresh")
+                        .cookie(cookie)
+        ).andDo(print());
+
+        // then
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("AccessToken 재발급 성공"))
+                .andExpect(jsonPath("$.data.accessToken").exists())
+                .andExpect(jsonPath("$.data.refreshToken")
+                        .value(refreshToken.toString()));
+    }
+    @Test
+    @DisplayName("RefreshToken 없으면 401")
+    void t14() throws Exception {
+
+        ResultActions resultActions = mvc.perform(
+                post("/api/v1/members/refresh")
+        ).andDo(print());
+
+        resultActions
+                .andExpect(status().isUnauthorized());
+    }
+    @Test
+    @DisplayName("유효하지 않은 RefreshToken")
+    void t15() throws Exception {
+
+        Cookie cookie = new Cookie(
+                "refreshToken",
+                UUID.randomUUID().toString()
+        );
+
+        ResultActions resultActions = mvc.perform(
+                post("/api/v1/members/refresh")
+                        .cookie(cookie)
+        ).andDo(print());
+
+        resultActions
+                .andExpect(status().isUnauthorized());
     }
 }
