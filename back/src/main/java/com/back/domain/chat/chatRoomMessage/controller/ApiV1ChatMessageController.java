@@ -12,10 +12,15 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+
+import static io.swagger.v3.core.util.PrimitiveType.DATE_TIME;
 
 @RestController
 @RequestMapping("/api/v1/rooms")
@@ -45,4 +50,30 @@ public class ApiV1ChatMessageController {
 
         return new RsData<>("201-1", "메시지 생성 성공", responseDto);
     }
+
+    @GetMapping("/{roomId}/messages")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "메시지 조회(폴링)")
+    public RsData<List<ChatRoomMessageResponseDto>> getMessages(
+            @PathVariable UUID roomId,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)LocalDateTime after
+            ) {
+        Member actor = rq.getActor();
+        if(actor == null) {
+            throw new ServiceException("401-1", "인증이 필요합니다.");
+        }
+        List<ChatRoomMessageResponseDto> messages = chatMessageService.getMessages(roomId, actor, after);
+
+        if(messages == null) {
+            return new RsData<>("200-3", "종료된 채팅방입니다.", null);
+        }
+        if(messages.isEmpty()) {
+            return new RsData<>("200-2", "신규 메시지 없음", null);
+        }
+
+        return new RsData<>("200-1", "메시지 목록 조회 성공", messages);
+    }
+
+
 }

@@ -3,6 +3,7 @@ package com.back.domain.chat.chatRoomMessage.service;
 import com.back.domain.chat.chatRoom.entity.ChatRoom;
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.chat.chatRoom.repository.ChatRoomRepository;
+import com.back.domain.chat.chatRoomMessage.dto.ChatRoomMessageRequestDto;
 import com.back.domain.chat.chatRoomMessage.dto.ChatRoomMessageResponseDto;
 import com.back.domain.chat.chatRoomMessage.entity.ChatMessage;
 import com.back.domain.chat.chatRoomMessage.repository.ChatMessageRepository;
@@ -14,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -54,6 +57,29 @@ public class ChatMessageService {
                 new ChatMessage(chatRoom, participant, content)
         );
 
-        return new ChatRoomMessageResponseDto(message);
+        return new ChatRoomMessageResponseDto(message, sender.getId());
     }
+
+    public List<ChatRoomMessageResponseDto> getMessages(UUID roomId, Member requester, LocalDateTime after) {
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new ServiceException("404-1", "채팅방을 찾을 수 없습니다."));
+
+        if(chatRoom.getStatus() == ChatRoomStatus.CLOSED) {
+            return null;
+        }
+
+        List<ChatMessage> messages;
+        if(after != null) {
+            messages = chatMessageRepository
+                    .findByChatRoomIdAndCreatedAtAfterOrderByCreatedAtAsc(roomId, after);
+        } else {
+            messages = chatMessageRepository.findByChatRoomIdOrderByCreatedAtAsc(roomId);
+        }
+
+        return messages
+                .stream()
+                .map(message -> new ChatRoomMessageResponseDto(message, requester.getId()))
+                .toList();
+    }
+
 }

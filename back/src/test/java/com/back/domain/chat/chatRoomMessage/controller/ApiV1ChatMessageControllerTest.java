@@ -3,6 +3,7 @@ package com.back.domain.chat.chatRoomMessage.controller;
 import com.back.domain.chat.chatRoom.entity.ChatRoom;
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.chat.chatRoom.repository.ChatRoomRepository;
+import com.back.domain.chat.chatRoomMessage.repository.ChatMessageRepository;
 import com.back.domain.chat.chatRoomParticipant.entity.ChatRoomParticipant;
 import com.back.domain.chat.chatRoomParticipant.repository.ChatRoomParticipantRepository;
 import com.back.domain.member.member.entity.Member;
@@ -45,6 +46,9 @@ public class ApiV1ChatMessageControllerTest {
 
     @Autowired
     private ChatRoomParticipantRepository chatRoomParticipantRepository;
+
+    @Autowired
+    private ChatMessageRepository chatMessageRepository;
 
     @Test
     @DisplayName("메시지 전송 성공")
@@ -258,7 +262,7 @@ public class ApiV1ChatMessageControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                    {
-                                    "content": "첫 번째 메시지"
+                                    "content": "오늘 진짜 야근 미쳤네요"
                                    }
                                 """)
         );
@@ -271,16 +275,16 @@ public class ApiV1ChatMessageControllerTest {
         resultActions
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
-                .andExpect(jsonPath("$.msg").value("메시지 조회 성공"))
-                .andExpect(jsonPath("$.data[0].content").value("첫 번째 메시지"))
+                .andExpect(jsonPath("$.msg").value("메시지 목록 조회 성공"))
+                .andExpect(jsonPath("$.data[0].content").value("오늘 진짜 야근 미쳤네요"))
                 .andExpect(jsonPath("$.data[0].isMine").value(true));
     }
 
     @Test
     @DisplayName("메시지 폴링 - 타인 메시지 isMine: false")
     void t8() throws Exception {
-        Member sender = memberService.join("user1@test.com", "1234", "IT", "USER");
-        Member viewer = memberService.join("user2@test.com", "1234", "Finance", "USER");
+        Member sender = memberService.join("user4@test.com", "1234", "IT", "USER");
+        Member viewer = memberService.join("user5@test.com", "1234", "Finance", "USER");
         String viewerToken = memberService.genAccessToken(viewer);
 
         ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
@@ -295,7 +299,7 @@ public class ApiV1ChatMessageControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                     {
-                                        "content": "저도요... 갑자기 핫픽스 떨어졌어요"
+                                        "content": "저도요...갑자기 핫픽스 떨어졌어요"
                                     }
                                 """)
         );
@@ -307,13 +311,15 @@ public class ApiV1ChatMessageControllerTest {
 
         result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("메시지 목록 조회 성공"))
+                .andExpect(jsonPath("$.data[0].content").value("저도요...갑자기 핫픽스 떨어졌어요"))
                 .andExpect(jsonPath("$.data[0].isMine").value(false));
     }
 
     @Test
     @DisplayName("메시지 폴링 - after 파라미터 필터링")
     void t9() throws Exception {
-        Member member = memberService.join("user1@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("user4@test.com", "1234", "IT", "USER");
         String accessToken = memberService.genAccessToken(member);
         ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
         UUID roomId = chatRoom.getId();
@@ -365,31 +371,17 @@ public class ApiV1ChatMessageControllerTest {
     @Test
     @DisplayName("메시지 폴링 - 종료된 채팅방")
     void t11() throws Exception {
-        Member member = memberService.join("user1@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("user4@test.com", "1234", "IT", "USER");
         String accessToken = memberService.genAccessToken(member);
-        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+
+        ChatRoom chatRoom = new ChatRoom(ChatRoomStatus.ACTIVE, 2);
+        chatRoom.close();
+        chatRoomRepository.save(chatRoom);
         UUID roomId = chatRoom.getId();
-        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, member, "익명의 동료"));
 
-        mvc.perform(
-                post("/api/v1/rooms/" + roomId + "/messages")
-                        .cookie(new Cookie("accessToken", accessToken))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                    {
-                                        "content": "대화 내용"
-                                    }
-                                """)
-        );
-
-        mvc.perform(
-                patch("/api/v1/rooms/" + roomId)
-                        .cookie(new Cookie("accessToken", accessToken))
-        );
-
-
-        ResultActions result = mvc.perform(get("/api/v1/rooms/" + roomId + "/messages")
-                .cookie(new Cookie("accessToken", accessToken)))
+        ResultActions result = mvc.perform(
+                get("/api/v1/rooms/" + roomId + "/messages")
+                        .cookie(new Cookie("accessToken", accessToken)))
                 .andDo(print());
 
         result.andExpect(status().isOk())
@@ -402,7 +394,7 @@ public class ApiV1ChatMessageControllerTest {
     @Test
     @DisplayName("메시지 폴링 - 존재하지 않는 채팅방 404")
     void t12() throws Exception {
-        Member member = memberService.join("user1@test.com", "1234", "IT", "USER");
+        Member member = memberService.join("user4@test.com", "1234", "IT", "USER");
         String accessToken = memberService.genAccessToken(member);
 
         ResultActions result = mvc.perform(get("/api/v1/rooms/" + UUID.randomUUID() + "/messages")
@@ -425,6 +417,7 @@ public class ApiV1ChatMessageControllerTest {
         result.andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.resultCode").value("401-1"));
     }
+
 
 
 }

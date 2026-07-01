@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> {
@@ -21,4 +24,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
             )
             """)
     int deleteMessagesInRoomsClosedBefore(@Param("threshold") LocalDateTime threshold);
+
+    List<ChatMessage> findByChatRoomIdOrderByCreatedAtAsc(UUID roomId);
+    List<ChatMessage> findByChatRoomIdAndCreatedAtAfterOrderByCreatedAtAsc(UUID roomId, LocalDateTime after);
 }
