@@ -36,18 +36,18 @@ public class ReportEventListener {
                 .orElseThrow(() -> new IllegalArgumentException("신고 정보를 찾을 수 없습니다. ID: " + event.reportId()));
 
         List<ChatMessage> roomMessages = chatMessageService.getMessagesByRoom(event.roomId());
-        for (ChatMessage msg : roomMessages) {
-            boolean isTarget = msg.getId().equals(event.targetMessageId());
-            ReportedMessage reportedMsg = new ReportedMessage(
-                    report,
-                    msg.getParticipant().getMember().getId(),
-                    msg.getParticipant().getNickname(),
-                    msg.getContent(),
-                    msg.getCreatedAt(),
-                    isTarget
-            );
-            reportedMessageRepository.save(reportedMsg);
-        }
+
+        List<ReportedMessage> reportedMessages = roomMessages.stream()
+                .map(msg -> new ReportedMessage(
+                        report,
+                        msg.getParticipant().getMember().getId(),
+                        msg.getParticipant().getNickname(),
+                        msg.getContent(),
+                        msg.getCreatedAt(),
+                        msg.getId().equals(event.targetMessageId())
+                ))
+                .toList();
+        reportedMessageRepository.saveAll(reportedMessages);
 
         log.info("[ReportEventListener] 비동기 대화 백업 완료 - Thread: {}", Thread.currentThread().getName());
     }
