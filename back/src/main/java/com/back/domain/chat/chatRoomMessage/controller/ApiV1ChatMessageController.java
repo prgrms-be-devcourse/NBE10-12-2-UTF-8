@@ -20,7 +20,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import static io.swagger.v3.core.util.PrimitiveType.DATE_TIME;
 
 @RestController
 @RequestMapping("/api/v1/rooms")

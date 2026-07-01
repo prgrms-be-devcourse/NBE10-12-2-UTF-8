@@ -379,6 +379,8 @@ public class ApiV1ChatMessageControllerTest {
         chatRoomRepository.save(chatRoom);
         UUID roomId = chatRoom.getId();
 
+        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, member, "익명의 동료"));
+
         ResultActions result = mvc.perform(
                 get("/api/v1/rooms/" + roomId + "/messages")
                         .cookie(new Cookie("accessToken", accessToken)))

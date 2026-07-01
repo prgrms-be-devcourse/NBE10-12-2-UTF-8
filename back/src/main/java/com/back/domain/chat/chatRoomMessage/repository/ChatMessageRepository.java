@@ -25,6 +25,25 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
             """)
     int deleteMessagesInRoomsClosedBefore(@Param("threshold") LocalDateTime threshold);
 
-    List<ChatMessage> findByChatRoomIdOrderByCreatedAtAsc(UUID roomId);
-    List<ChatMessage> findByChatRoomIdAndCreatedAtAfterOrderByCreatedAtAsc(UUID roomId, LocalDateTime after);
+    @Query("""
+           SELECT m FROM ChatMessage m
+           JOIN FETCH m.participant p
+           JOIN FETCH p.member
+           WHERE m.chatRoom.id = :roomId
+           ORDER BY m.createdAt ASC
+           """)
+    List<ChatMessage> findByChatRoomIdOrderByCreatedAtAsc(@Param("roomId")UUID roomId);
+
+    @Query("""
+           SELECT m FROM ChatMessage m
+           JOIN FETCH m.participant p
+           JOIN FETCH p.member
+           WHERE m.chatRoom.id = :roomId
+           AND m.createdAt > :after
+           ORDER BY m.createdAt ASC
+           """)
+    List<ChatMessage> findByChatRoomIdAndCreatedAtAfterOrderByCreatedAtAsc(
+            @Param("roomId") UUID roomId,
+            @Param("after") LocalDateTime after
+    );
 }

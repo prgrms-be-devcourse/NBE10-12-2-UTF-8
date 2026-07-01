@@ -3,7 +3,6 @@ package com.back.domain.chat.chatRoomMessage.service;
 import com.back.domain.chat.chatRoom.entity.ChatRoom;
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.chat.chatRoom.repository.ChatRoomRepository;
-import com.back.domain.chat.chatRoomMessage.dto.ChatRoomMessageRequestDto;
 import com.back.domain.chat.chatRoomMessage.dto.ChatRoomMessageResponseDto;
 import com.back.domain.chat.chatRoomMessage.entity.ChatMessage;
 import com.back.domain.chat.chatRoomMessage.repository.ChatMessageRepository;
@@ -63,18 +62,19 @@ public class ChatMessageService {
     public List<ChatRoomMessageResponseDto> getMessages(UUID roomId, Member requester, LocalDateTime after) {
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new ServiceException("404-1", "채팅방을 찾을 수 없습니다."));
+        boolean isParticipant = chatRoomParticipantRepository
+                .existsByChatRoomIdAndMemberId(roomId, requester.getId());
+        if(!isParticipant){
+            throw new ServiceException("403-1", "해당 채팅방에 접근 권한이 없습니다.");
+        }
 
         if(chatRoom.getStatus() == ChatRoomStatus.CLOSED) {
-            return null;
+            throw new ServiceException("200-3", "종료된 채팅방입니다.");
         }
 
-        List<ChatMessage> messages;
-        if(after != null) {
-            messages = chatMessageRepository
-                    .findByChatRoomIdAndCreatedAtAfterOrderByCreatedAtAsc(roomId, after);
-        } else {
-            messages = chatMessageRepository.findByChatRoomIdOrderByCreatedAtAsc(roomId);
-        }
+        List<ChatMessage> messages = (after != null)
+                ? chatMessageRepository.findByChatRoomIdAndCreatedAtAfterOrderByCreatedAtAsc(roomId, after)
+                : chatMessageRepository.findByChatRoomIdOrderByCreatedAtAsc(roomId);
 
         return messages
                 .stream()
