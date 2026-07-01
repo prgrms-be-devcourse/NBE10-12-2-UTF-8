@@ -2,6 +2,7 @@ package com.back.domain.match.matchRequest.entity;
 
 import com.back.domain.chat.chatRoom.entity.ChatRoom;
 import com.back.domain.member.member.entity.Industry;
+import com.back.domain.member.member.entity.IndustryConverter;
 import com.back.domain.member.member.entity.Member;
 import com.back.global.jpa.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -22,7 +23,7 @@ public class MatchRequest extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id")
     private ChatRoom room;
-    @Convert(converter = com.back.domain.member.member.entity.IndustryConverter.class)
+    @Convert(converter = IndustryConverter.class)
     private Industry industry;
     @Convert(converter = SituationConverter.class)
     private Situation situation;
