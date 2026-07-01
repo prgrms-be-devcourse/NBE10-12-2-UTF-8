@@ -63,7 +63,6 @@ public class MemberService {
         member.updateRefreshToken(token);
         return token;
     }
-    @Transactional(readOnly = true)
     public String refreshAccessToken(UUID refreshToken) {
         Member member = memberRepository.findByRefreshToken(refreshToken)
                 .orElseThrow(() ->
