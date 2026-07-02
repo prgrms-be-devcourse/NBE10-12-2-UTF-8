@@ -408,4 +408,123 @@ public class ApiV1ReportControllerTest {
                     assertThat(hasLaterMessage).isFalse();
                 });
     }
+
+    @Test
+    @DisplayName("채팅방 참여자가 아닌 유저가 신고 시도 시 실패")
+    void t8() throws Exception {
+        // Given
+        Member reporter = memberService.join("reporter8@test.com", "1234", Industry.IT, "USER");
+        Member reported = memberService.join("reported8@test.com", "1234", Industry.IT, "USER");
+        Member outsider = memberService.join("outsider8@test.com", "1234", Industry.IT, "USER");
+        createdMembers.add(reporter);
+        createdMembers.add(reported);
+        createdMembers.add(outsider);
+        String outsiderToken = memberService.genAccessToken(outsider);
+
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        UUID roomId = chatRoom.getId();
+
+        ChatRoomParticipant p1 = chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, reporter, "익명1"));
+        ChatRoomParticipant p2 = chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, reported, "익명2"));
+
+        ChatMessage targetMessage = chatMessageRepository.save(new ChatMessage(chatRoom, p2, "부적절한 발언"));
+        UUID reportedMessageId = targetMessage.getId();
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/reports")
+                                .cookie(new Cookie("accessToken", outsiderToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                            "roomId": "%s",
+                                            "reportedMessageId": "%s",
+                                            "reason": "참여자 아님 신고 시도"
+                                        }
+                                        """.formatted(roomId, reportedMessageId))
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.resultCode").value("403-2"))
+                .andExpect(jsonPath("$.msg").value("채팅방 참여자만 신고할 수 있습니다."));
+    }
+
+    @Test
+    @DisplayName("신고 메시지가 요청한 채팅방에 속하지 않을 경우 실패")
+    void t9() throws Exception {
+        // Given
+        Member reporter = memberService.join("reporter9@test.com", "1234", Industry.IT, "USER");
+        Member reported = memberService.join("reported9@test.com", "1234", Industry.IT, "USER");
+        createdMembers.add(reporter);
+        createdMembers.add(reported);
+        String accessToken = memberService.genAccessToken(reporter);
+
+        ChatRoom chatRoom1 = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        ChatRoom chatRoom2 = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+
+        ChatRoomParticipant p1 = chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom1, reporter, "익명1"));
+        ChatRoomParticipant p2 = chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom1, reported, "익명2"));
+
+        ChatRoomParticipant p3 = chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom2, reported, "익명3"));
+        ChatMessage targetMessage = chatMessageRepository.save(new ChatMessage(chatRoom2, p3, "엉뚱한 방의 대화"));
+        UUID reportedMessageId = targetMessage.getId();
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/reports")
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                            "roomId": "%s",
+                                            "reportedMessageId": "%s",
+                                            "reason": "방 불일치 메시지 신고"
+                                        }
+                                        """.formatted(chatRoom1.getId(), reportedMessageId))
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400-3"))
+                .andExpect(jsonPath("$.msg").value("요청한 채팅방의 메시지가 아닙니다."));
+    }
+
+    @Test
+    @DisplayName("신고 사유가 공백이거나 빈 문자열일 경우 유효성 검증 실패")
+    void t10() throws Exception {
+        // Given
+        Member reporter = memberService.join("reporter10@test.com", "1234", Industry.IT, "USER");
+        createdMembers.add(reporter);
+        String accessToken = memberService.genAccessToken(reporter);
+        UUID roomId = UUID.randomUUID();
+        UUID reportedMessageId = UUID.randomUUID();
+
+        // When
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/reports")
+                                .cookie(new Cookie("accessToken", accessToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                            "roomId": "%s",
+                                            "reportedMessageId": "%s",
+                                            "reason": "   "
+                                        }
+                                        """.formatted(roomId, reportedMessageId))
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isBadRequest());
+    }
 }
+
