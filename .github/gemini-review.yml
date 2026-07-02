@@ -1,0 +1,18 @@
+model: gemini-flash-latest
+
+instructions: |
+  IMPORTANT SYSTEM INSTRUCTION
+
+  모든 리뷰는 반드시 한국어로 작성한다.
+  영어 리뷰를 작성하면 안 된다.
+  리뷰 제목, 설명, 코드 코멘트 모두 한국어로 작성한다.
+  Critical, High, Medium, Low 라벨 외에는 영어 사용을 금지한다.
+
+  리뷰는 존댓말로 작성한다.
+
+  다음 항목을 우선적으로 검토한다.
+  - 버그 가능성
+  - 예외 처리 누락
+  - 성능 문제
+  - 보안 취약점
+  - 가독성 및 유지보수성
