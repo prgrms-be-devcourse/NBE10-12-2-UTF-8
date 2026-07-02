@@ -4,5 +4,6 @@ import java.util.List;
 
 public record DashboardResponseDto(
         MatchStatisticsDto matchStatistics,
-        List<IndustryStatisticsDto> industryStatistics
+        List<IndustryStatisticsDto> industryStatistics,
+        List<RecentMatchLogDto> recentMatchLogs
 ) {}

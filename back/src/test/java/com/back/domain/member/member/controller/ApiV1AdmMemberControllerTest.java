@@ -56,7 +56,7 @@ public class ApiV1AdmMemberControllerTest {
         // When
         ResultActions resultActions = mvc
                 .perform(
-                        get("/api/v1/adm/members")
+                        get("/api/v1/admin/members")
                                 .header("Authorization", "Bearer " + accessToken)
                                 .param("page", "0")
                                 .param("size", "10")
@@ -98,7 +98,7 @@ public class ApiV1AdmMemberControllerTest {
 
         // Given - 조회할 memberId 가져오기
         String membersResponse = mvc.perform(
-                        get("/api/v1/adm/members")
+                        get("/api/v1/admin/members")
                                 .header("Authorization", "Bearer " + accessToken)
                 )
                 .andReturn()
@@ -116,7 +116,7 @@ public class ApiV1AdmMemberControllerTest {
         // When
         ResultActions resultActions = mvc
                 .perform(
-                        get("/api/v1/adm/members/" + memberId)
+                        get("/api/v1/admin/members/" + memberId)
                                 .header("Authorization", "Bearer " + accessToken)
                 )
                 .andDo(print());
