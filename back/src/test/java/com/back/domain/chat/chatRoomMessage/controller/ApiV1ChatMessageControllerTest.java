@@ -52,7 +52,7 @@ public class ApiV1ChatMessageControllerTest {
     private ChatMessageRepository chatMessageRepository;
 
     @Test
-    @DisplayName("메시지 전송 성공 - 작성자: isMine(true), 상대방: isMine(false)")
+    @DisplayName("메시지 전송 성공")
     void t1() throws Exception {
         // Given
         Member member = memberService.join("user4@test.com", "1234", IT, "USER");
