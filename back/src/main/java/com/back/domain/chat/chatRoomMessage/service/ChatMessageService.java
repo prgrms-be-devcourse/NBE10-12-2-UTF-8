@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,7 +56,7 @@ public class ChatMessageService {
                 new ChatMessage(chatRoom, participant, content)
         );
 
-        return new ChatRoomMessageResponseDto(message);
+        return new ChatRoomMessageResponseDto(message, sender.getId());
     }
 
     public ChatMessage getMessage(UUID messageId) {
@@ -74,5 +75,28 @@ public class ChatMessageService {
                 roomId,
                 targetMessage.getCreatedAt()
         );
+    }
+
+    public List<ChatRoomMessageResponseDto> getMessages(UUID roomId, Member requester, LocalDateTime after) {
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new ServiceException("404-1", "채팅방을 찾을 수 없습니다."));
+        boolean isParticipant = chatRoomParticipantRepository
+                .existsByChatRoomIdAndMemberId(roomId, requester.getId());
+        if(!isParticipant){
+            throw new ServiceException("403-1", "해당 채팅방에 접근 권한이 없습니다.");
+        }
+
+        if(chatRoom.getStatus() == ChatRoomStatus.CLOSED) {
+            throw new ServiceException("200-3", "종료된 채팅방입니다.");
+        }
+
+        List<ChatMessage> messages = (after != null)
+                ? chatMessageRepository.findByChatRoomIdAndCreatedAtAfterOrderByCreatedAtAsc(roomId, after)
+                : chatMessageRepository.findByChatRoomIdOrderByCreatedAtAsc(roomId);
+
+        return messages
+                .stream()
+                .map(message -> new ChatRoomMessageResponseDto(message, requester.getId()))
+                .toList();
     }
 }
