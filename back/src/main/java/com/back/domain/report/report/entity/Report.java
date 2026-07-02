@@ -26,7 +26,9 @@ public class Report extends BaseEntity {
     @JoinColumn(name = "room_id")
     private ChatRoom room;   // 발생한 채팅방
 
-    private UUID reportedMessageId; // 신고 대상이 된 원본 메시지의 ID (UUID)
+    // 신고 대상 원본 ChatMessage의 ID.
+    // 원본 메시지는 24시간 후 Hard Delete 되므로 참조 무결성 예외 방지를 위해 외래키(FK) 없이 UUID만 보관함.
+    private UUID reportedMessageId;
 
     @Column(columnDefinition = "TEXT")
     private String reason;   // 신고 사유
