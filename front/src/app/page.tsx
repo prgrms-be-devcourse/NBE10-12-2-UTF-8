@@ -4,21 +4,22 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
   apiCreateMatch, apiGetMatch, apiCancelMatch,
-  apiGetRoom, apiGetActiveRoom, apiCloseRoom, apiSendMessage,
+  apiGetRoom, apiGetActiveRoom, apiCloseRoom, apiSendMessage, apiGetMessages,
   apiGetMe, getToken, INDUSTRY_NAMES, type ChatMsg,
 } from '@/lib/api';
 
 type Phase = 'search' | 'matching' | 'chatting';
 
+// 백엔드 Situation enum 라벨과 정확히 일치해야 함
 const TOPICS = [
   { label: '야근 중',       count: '3.2천' },
-  { label: '퇴사 충동',     count: '2.1천' },
-  { label: '사내 갑질 토론', count: '1.8천' },
-  { label: '이직 뻘짓',     count: '2.6천' },
+  { label: '회의 폭탄',     count: '2.1천' },
+  { label: '사내 연애 폭로', count: '1.8천' },
+  { label: '상사 억까',     count: '2.6천' },
   { label: '사내 정치 피로', count: '1.4천' },
-  { label: '이직 말려요',    count: '2.9천' },
-  { label: '연봉 협상 앞둔', count: '980'  },
-  { label: '몰래 루팡 중',   count: '1.7천' },
+  { label: '이직 마려움',    count: '2.9천' },
+  { label: '연봉 협상 앞둠', count: '980'  },
+  { label: '몰래 루팡중',    count: '1.7천' },
   { label: '기타',           count: '540'  },
 ];
 
@@ -108,6 +109,7 @@ export default function HomePage() {
   const [matchSituation, setMatchSituation] = useState('');
   const [isLoggedIn, setIsLoggedIn]     = useState(false);
   const [matchError, setMatchError]     = useState('');
+  const [partnerLeft, setPartnerLeft]   = useState(false);
 
   const phaseRef          = useRef<Phase>('search');
   const matchRequestIdRef = useRef<string | null>(null);
@@ -116,6 +118,8 @@ export default function HomePage() {
   const matchPollRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
   const chatTimerRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+  const msgPollRef        = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastMsgTimeRef    = useRef<string | null>(null);
   const chatEndRef        = useRef<HTMLDivElement>(null);
   const inputRef          = useRef<HTMLInputElement>(null);
 
@@ -124,7 +128,7 @@ export default function HomePage() {
   }, []);
 
   const stopAll = useCallback(() => {
-    [matchPollRef, elapsedTimerRef, chatTimerRef].forEach(r => {
+    [matchPollRef, elapsedTimerRef, chatTimerRef, msgPollRef].forEach(r => {
       if (r.current) { clearInterval(r.current); r.current = null; }
     });
   }, []);
@@ -136,22 +140,63 @@ export default function HomePage() {
     chatRoomIdRef.current = null;
     matchRequestIdRef.current = null;
     seenMsgIds.current.clear();
+    lastMsgTimeRef.current = null;
     localStorage.removeItem(ROOM_KEY);
     localStorage.removeItem(MATCH_KEY);
     setMessages([]);
     setInput('');
     setMatchSituation('');
     setChatTimeLeft(600);
+    setPartnerLeft(false);
     setPhaseSync('search');
   }, [stopAll, setPhaseSync]);
 
-  // 백엔드에 메시지 조회(GET) API가 아직 없어 상대 메시지는 실시간으로 받을 수 없음 — 보낸 메시지만 표시
+  const notifyPartnerLeft = useCallback(() => {
+    stopAll();
+    setPartnerLeft(true);
+  }, [stopAll]);
+
   const enterChat = useCallback(async (roomId: string) => {
     chatRoomIdRef.current = roomId;
     matchRequestIdRef.current = null;
     localStorage.setItem(ROOM_KEY, roomId);
     localStorage.removeItem(MATCH_KEY);
     setPhaseSync('chatting');
+
+    // 기존 메시지 초기 로드
+    try {
+      const { msgs: initial, closed } = await apiGetMessages(roomId);
+      if (closed) { notifyPartnerLeft(); return; }
+      if (initial && initial.length > 0) {
+        const fresh = initial.filter(m => !seenMsgIds.current.has(m.messageId));
+        fresh.forEach(m => seenMsgIds.current.add(m.messageId));
+        setMessages(prev => [...prev, ...fresh]);
+        lastMsgTimeRef.current = initial[initial.length - 1].createdAt;
+      }
+    } catch { /* ignore */ }
+
+    // 2초마다 새 메시지 폴링
+    if (msgPollRef.current) clearInterval(msgPollRef.current);
+    msgPollRef.current = setInterval(async () => {
+      if (phaseRef.current !== 'chatting') {
+        clearInterval(msgPollRef.current!); msgPollRef.current = null; return;
+      }
+      const rid = chatRoomIdRef.current;
+      if (!rid) return;
+      try {
+        const { msgs: newMsgs, closed } = await apiGetMessages(rid, lastMsgTimeRef.current ?? undefined);
+        if (closed) { notifyPartnerLeft(); return; }
+        if (newMsgs && newMsgs.length > 0) {
+          const fresh = newMsgs.filter(m => !seenMsgIds.current.has(m.messageId));
+          fresh.forEach(m => seenMsgIds.current.add(m.messageId));
+          if (fresh.length > 0) {
+            setMessages(prev => [...prev, ...fresh]);
+            lastMsgTimeRef.current = newMsgs[newMsgs.length - 1].createdAt;
+          }
+        }
+      } catch { /* ignore */ }
+    }, 2000);
+
     try {
       const room = await apiGetRoom(roomId);
       if (room.status === 'CLOSED') { endChat(); return; }
@@ -172,7 +217,7 @@ export default function HomePage() {
         setChatTimeLeft(prev => { const n = prev - 1; if (n <= 0) { endChat(); return 0; } return n; });
       }, 1000);
     }
-  }, [setPhaseSync, endChat]);
+  }, [setPhaseSync, endChat, notifyPartnerLeft]);
 
   const startMatchPoll = useCallback((id: string) => {
     if (matchPollRef.current) clearInterval(matchPollRef.current);
@@ -192,13 +237,17 @@ export default function HomePage() {
   }, [enterChat]);
 
   const doStartMatch = useCallback(async () => {
-    const sit = situation.trim() || selectedTopic || '대화 중';
+    // 백엔드 Situation enum 이외의 값은 400 에러 → 칩 선택 필수
+    if (!selectedTopic) {
+      setMatchError('상황 칩을 선택해주세요');
+      return;
+    }
     setMatchError('');
-    setMatchSituation(sit);
+    setMatchSituation(selectedTopic);
     try {
-      const data = await apiCreateMatch(sit);
+      const data = await apiCreateMatch(selectedTopic);
       matchRequestIdRef.current = data.matchRequestId;
-      localStorage.setItem(MATCH_KEY, JSON.stringify({ id: data.matchRequestId, situation: sit }));
+      localStorage.setItem(MATCH_KEY, JSON.stringify({ id: data.matchRequestId, situation: selectedTopic }));
       setElapsed(0);
       setPhaseSync('matching');
       elapsedTimerRef.current = setInterval(() => setElapsed(p => p + 1), 1000);
@@ -209,7 +258,7 @@ export default function HomePage() {
       setMatchSituation('');
       setMatchError((err as Error)?.message || '매칭을 시작하지 못했어요. 다시 시도해주세요');
     }
-  }, [situation, selectedTopic, setPhaseSync, startMatchPoll]);
+  }, [selectedTopic, setPhaseSync, startMatchPoll]);
 
   const startMatch = useCallback(() => {
     if (chatRoomIdRef.current) { setShowResume(true); return; }
@@ -262,8 +311,15 @@ export default function HomePage() {
           content: sent.content, createdAt: sent.createdAt, isMine: true,
         }]);
       }
-    } catch (err) { console.error(err); }
-  }, [input]);
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (status === 409) {
+        notifyPartnerLeft();
+      } else {
+        setInput(content);
+      }
+    }
+  }, [input, endChat, notifyPartnerLeft]);
 
   // On mount: check auth + industry + in-progress chat/match (새로고침으로 잃어버린 매칭 요청도 복구)
   useEffect(() => {
@@ -472,6 +528,21 @@ export default function HomePage() {
           {/* ── CHATTING body: messages ── */}
           {phase === 'chatting' && (
             <div style={{ padding: '12px 18px 14px' }}>
+              {/* Partner left notification */}
+              {partnerLeft && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fff8e1', border: '1px solid #f5b400', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>👋</span>
+                    <span style={{ fontSize: 13, color: '#5f3e00', fontWeight: 500 }}>상대방이 채팅을 종료했습니다</span>
+                  </div>
+                  <button
+                    onClick={endChat}
+                    style={{ flexShrink: 0, padding: '5px 14px', background: '#f5b400', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    확인
+                  </button>
+                </div>
+              )}
               {/* Partner info + timer + end button */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 11 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { apiGetDashboard, isAdmin, INDUSTRY_NAMES } from '@/lib/api';
 import AdminHeader from '@/components/AdminHeader';
 
+// 백엔드 Industry enum 라벨(한글 전체) 기준으로 색상 매핑
 const INDUSTRY_COLORS: Record<string, string> = {
-  IT: '#3b7ff2', 서비스: '#34a06b', 금융: '#f5b400',
-  의료: '#ea4c4c', 유통: '#3b7ff2', 미디어: '#ea4c4c', 사무: '#34a06b',
+  'IT/개발': '#3b7ff2', 서비스업: '#34a06b', 금융업: '#f5b400',
+  의료서비스: '#ea4c4c', 유통: '#3b7ff2', '미디어/디자인': '#ea4c4c', 사무업: '#34a06b',
 };
 
 const MATCH_LOG = [
