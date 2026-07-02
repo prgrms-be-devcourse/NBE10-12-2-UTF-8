@@ -26,3 +26,17 @@ jobs:
           context: ./back
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/nbe10-12-2-utf-8-back:latest
+
+      - name: Railway 재배포 트리거
+        run: |
+         curl -X POST \
+          -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "query": "mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) { serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId) }",
+            "variables": {
+              "serviceId": "${{ secrets.RAILWAY_SERVICE_ID }}",
+              "environmentId": "7bb326a9-c879-4457-a33d-f0605d23ae75"
+            }
+          }' \
+          https://backboard.railway.app/graphql/v2
