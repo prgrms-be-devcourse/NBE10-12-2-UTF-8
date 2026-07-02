@@ -10,6 +10,7 @@ import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.match.matchRequest.repository.MatchRequestRepository;
 import com.back.domain.member.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,9 @@ public class DashboardService {
     private final ChatRoomRepository chatRoomRepository;
 
     private static final int RECENT_MATCH_LOG_SIZE = 10;
+    // room 기준 중복 제거를 하고도 목표 개수(10)를 채울 수 있게 넉넉히 가져오는 배치 크기
+    private static final int RECENT_MATCH_FETCH_BATCH_SIZE = 20;
+
 
     public DashboardResponseDto getDashboard() {
         long totalMembers = memberRepository.count();
@@ -53,7 +57,8 @@ public class DashboardService {
     // room 기준으로 먼저 나온 것만 남기고, 회원 식별 정보 없이 날짜/산업군/상황만 노출한다.
     private List<RecentMatchLogDto> getRecentMatchLogs() {
         Set<UUID> seenRoomIds = new HashSet<>();
-        return matchRequestRepository.findTop20ByStatusOrderByModifiedAtDesc(MatchStatus.MATCHED)
+        return matchRequestRepository
+                .findRecentByStatus(MatchStatus.MATCHED, PageRequest.of(0, RECENT_MATCH_FETCH_BATCH_SIZE))
                 .stream()
                 .filter(r -> seenRoomIds.add(r.getRoom().getId()))
                 .limit(RECENT_MATCH_LOG_SIZE)

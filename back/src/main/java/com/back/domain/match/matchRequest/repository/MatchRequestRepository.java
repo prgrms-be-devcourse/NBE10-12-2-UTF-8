@@ -6,6 +6,7 @@ import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.match.matchRequest.entity.Situation;
 import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -41,9 +42,10 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
             @Param("expiredBefore") LocalDateTime expiredBefore);
 
     List<MatchRequest> findByMemberAndRoomStatus(Member member, ChatRoomStatus status);
-
     // 매칭 성사 시 양쪽 MatchRequest가 거의 동시에 modifiedAt이 갱신되므로,
-    // room 기준 중복 제거는 서비스 레이어에서 처리한다 (넉넉히 20개 가져와 10개로 추림)
-    List<MatchRequest> findTop20ByStatusOrderByModifiedAtDesc(MatchStatus status);
-
+    // room 기준 중복 제거는 서비스 레이어에서 처리한다 (넉넉히 pageable로 가져와 추림)
+    // room은 LAZY라 getId()만 쓰면 프록시 초기화 없이 값을 얻지만(N+1 안 남),
+    // 이후 room의 다른 필드를 참조하게 되는 실수를 방지하기 위해 fetch join을 명시해둔다
+    @Query("SELECT mr FROM MatchRequest mr JOIN FETCH mr.room WHERE mr.status = :status ORDER BY mr.modifiedAt DESC")
+    List<MatchRequest> findRecentByStatus(@Param("status") MatchStatus status, Pageable pageable);
 }
