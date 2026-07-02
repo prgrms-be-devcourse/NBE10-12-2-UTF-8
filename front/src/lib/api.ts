@@ -93,6 +93,12 @@ export const apiSignup = (email: string, password: string, industry: string) =>
 export const apiLogout = () =>
   req<null>("/api/v1/members/logout", { method: "POST" });
 
+export const apiRefreshToken = () =>
+  req<{ grantType: string; accessToken: string; refreshToken: string; accessTokenExpiresIn: number }>(
+    "/api/v1/members/refresh",
+    { method: "POST" },
+  );
+
 export const apiGetMe = () =>
   req<{ email: string; industry: string }>("/api/v1/members/me");
 
@@ -105,17 +111,29 @@ export const apiUpdateMe = (industry: string) =>
 export const apiDeleteMe = () =>
   req<null>("/api/v1/members/me", { method: "DELETE" });
 
+export type MatchHistoryDto = {
+  matchedAt: string;
+  industry: string;
+  situation: string;
+  status: 'ACTIVE' | 'CLOSED';
+};
+
+export const apiGetMatchHistory = () =>
+  req<MatchHistoryDto[]>("/api/v1/members/me/matches");
+
 /* ── Match ──────────────────────────────────────────────────────── */
+export type MatchResponseDto = {
+  matchRequestId: string;
+  status: 'PENDING' | 'MATCHED';
+  requestedAt: string;
+  chatRoomId?: string;
+};
+
 export const apiCreateMatch = (situation: string) =>
-  req<{ matchRequestId: string; status: string; requestedAt: string }>(
-    "/api/v1/matches",
-    { method: "POST", body: JSON.stringify({ situation }) },
-  );
+  req<MatchResponseDto>("/api/v1/matches", { method: "POST", body: JSON.stringify({ situation }) });
 
 export const apiGetMatch = (matchRequestId: string) =>
-  req<{ status: string; chatRoomId?: string }>(
-    `/api/v1/matches/${matchRequestId}`,
-  );
+  req<MatchResponseDto>(`/api/v1/matches/${matchRequestId}`);
 
 export const apiCancelMatch = (matchRequestId: string) =>
   req<null>(`/api/v1/matches/${matchRequestId}`, { method: "DELETE" });
@@ -141,22 +159,18 @@ export const apiCloseRoom = (roomId: string) =>
   req<ChatRoom>(`/api/v1/rooms/${roomId}`, { method: "PATCH" });
 
 export const apiSendMessage = (roomId: string, content: string) =>
-  req<{
-    messageId: string;
-    roomId: string;
-    senderNickname: string;
-    content: string;
-    createdAt: string;
-  }>(`/api/v1/rooms/${roomId}/messages`, {
+  req<ChatMsg>(`/api/v1/rooms/${roomId}/messages`, {
     method: "POST",
     body: JSON.stringify({ content }),
   });
 
 export type ChatMsg = {
   messageId: string;
+  roomId: string;
   senderNickname: string;
   content: string;
   createdAt: string;
+  mine: boolean;
   isMine: boolean;
 };
 
@@ -211,3 +225,6 @@ export const apiGetAdminMembers = (page = 0, size = 10) =>
     totalElements: number;
     pageable: { pageNumber: number; pageSize: number };
   }>(`/api/v1/adm/members?page=${page}&size=${size}`);
+
+export const apiGetAdminMember = (memberId: string) =>
+  req<AdminMember>(`/api/v1/adm/members/${memberId}`);
