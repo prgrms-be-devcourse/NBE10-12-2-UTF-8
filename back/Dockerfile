@@ -1,12 +1,12 @@
-# 빌드 스테이지
-FROM gradle:8.14-jdk21 AS builder
+# 빌드 스테이지 (Gradle 및 JDK 25 환경)
+FROM gradle:jdk25 AS builder
 WORKDIR /app
 COPY . .
 RUN gradle build -x test --no-daemon
 
-# 실행 스테이지
-FROM eclipse-temurin:21-jre-alpine
+# 실행 스테이지 (런타임용 25 환경)
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java" , "-jar" , "app.jar" ]
