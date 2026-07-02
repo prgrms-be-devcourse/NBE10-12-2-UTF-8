@@ -5,6 +5,7 @@ import com.back.domain.chat.chatRoom.service.ChatRoomService;
 import com.back.domain.chat.chatRoomMessage.entity.ChatMessage;
 import com.back.domain.chat.chatRoomMessage.service.ChatMessageService;
 import com.back.domain.chat.chatRoomParticipant.entity.ChatRoomParticipant;
+import com.back.domain.chat.chatRoomParticipant.service.ChatRoomParticipantService;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.report.report.entity.Report;
 import com.back.domain.report.report.event.ReportCreatedEvent;
@@ -27,6 +28,7 @@ public class ReportService {
     private final ReportRepository reportRepository;
     private final ChatRoomService chatRoomService;
     private final ChatMessageService chatMessageService;
+    private final ChatRoomParticipantService chatRoomParticipantService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -39,24 +41,29 @@ public class ReportService {
         // 2. ChatMessageService를 통해 메시지 검증 및 조회
         ChatMessage targetMessage = chatMessageService.getMessage(reportedMessageId);
 
-        // 3. 메시지 발송인(피신고자) 특정
+        // 3. 신고자가 해당 채팅방의 참여자(Participant)인지 서비스 위임 검증
+        if (!chatRoomParticipantService.isParticipant(roomId, reporter.getId())) {
+            throw new ServiceException("403-2", "채팅방 참여자만 신고할 수 있습니다.");
+        }
+
+        // 4. 메시지 발송인(피신고자) 특정
         ChatRoomParticipant participant = targetMessage.getParticipant();
         Member reported = participant.getMember();
 
-        // 4. 자기 자신 신고 금지 차단
+        // 5. 자기 자신 신고 금지 차단
         if (reporter.getId().equals(reported.getId())) {
             throw new ServiceException("400-1", "자신을 신고할 수 없습니다.");
         }
 
-        // 5. 동일 메시지 중복 신고 차단
+        // 6. 동일 메시지 중복 신고 차단
         if (reportRepository.existsByReporterAndReportedMessageId(reporter, reportedMessageId)) {
             throw new ServiceException("400-2", "이미 신고된 메시지입니다.");
         }
 
-        // 6. 신고(Report) 객체 생성 및 저장
+        // 7. 신고(Report) 객체 생성 및 저장
         Report report = reportRepository.save(new Report(reporter, reported, room, reportedMessageId, reason));
 
-        // 7. 비동기 이벤트 발행 (엔티티 대신 식별자 ID만 전달하도록 수정)
+        // 8. 비동기 이벤트 발행 (엔티티 대신 식별자 ID만 전달하도록 수정)
         eventPublisher.publishEvent(new ReportCreatedEvent(report.getId(), room.getId(), reportedMessageId));
 
         log.info("[ReportService] 신고 접수 완료 - Thread: {}", Thread.currentThread().getName());
