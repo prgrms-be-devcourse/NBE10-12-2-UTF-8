@@ -35,7 +35,7 @@ public class SecurityConfig {
                                         HttpMethod.POST,
                                         "/api/*/members/signup"
                                 ).permitAll()
-                                .requestMatchers("/api/*/adm/**").hasRole("ADMIN")
+                                .requestMatchers("/api/*/admin/**").hasRole("ADMIN")
                                 .requestMatchers("/api/*/**").authenticated()
                                 .anyRequest().permitAll()
                 )

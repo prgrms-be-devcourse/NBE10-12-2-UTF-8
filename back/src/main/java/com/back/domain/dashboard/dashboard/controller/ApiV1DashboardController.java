@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/adm/dashboard")
+@RequestMapping("/api/v1/admin/dashboard")
 @RequiredArgsConstructor
 @Tag(name = "ApiV1DashboardController", description = "관리자 대시보드 컨트롤러")
 @SecurityRequirement(name = "bearerAuth")

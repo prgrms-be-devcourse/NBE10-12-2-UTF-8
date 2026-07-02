@@ -41,4 +41,9 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
             @Param("expiredBefore") LocalDateTime expiredBefore);
 
     List<MatchRequest> findByMemberAndRoomStatus(Member member, ChatRoomStatus status);
+
+    // 매칭 성사 시 양쪽 MatchRequest가 거의 동시에 modifiedAt이 갱신되므로,
+    // room 기준 중복 제거는 서비스 레이어에서 처리한다 (넉넉히 20개 가져와 10개로 추림)
+    List<MatchRequest> findTop20ByStatusOrderByModifiedAtDesc(MatchStatus status);
+
 }
