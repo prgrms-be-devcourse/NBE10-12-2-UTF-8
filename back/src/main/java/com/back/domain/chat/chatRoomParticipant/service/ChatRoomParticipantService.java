@@ -44,4 +44,8 @@ public class ChatRoomParticipantService {
         return chatRoomParticipantRepository.findByMemberIdAndChatRoomStatus(member.getId(), ChatRoomStatus.ACTIVE)
                 .map(ChatRoomParticipant::getChatRoom);
     }
+
+    public boolean isParticipant(UUID roomId, UUID memberId) {
+        return chatRoomParticipantRepository.existsByChatRoomIdAndMemberId(roomId, memberId);
+    }
 }
