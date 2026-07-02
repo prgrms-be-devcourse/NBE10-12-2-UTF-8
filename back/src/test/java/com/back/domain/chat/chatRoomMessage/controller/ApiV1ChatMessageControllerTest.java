@@ -52,7 +52,7 @@ public class ApiV1ChatMessageControllerTest {
     private ChatMessageRepository chatMessageRepository;
 
     @Test
-    @DisplayName("메시지 전송 성공")
+    @DisplayName("메시지 전송 성공 - 보낸 채팅")
     void t1() throws Exception {
         // Given
         Member member = memberService.join("user4@test.com", "1234", IT, "USER");
@@ -441,7 +441,7 @@ public class ApiV1ChatMessageControllerTest {
     }
 
     @Test
-    @DisplayName("메시지 - 전체 채팅 흐름")
+    @DisplayName("메시지 폴링 - 전체 채팅 흐름")
     void t15() throws Exception {
         Member memberA = memberService.join("user6@test.com", "1234", IT, "USER");
         Member memberB = memberService.join("user7@test.com", "1234", IT, "USER");
