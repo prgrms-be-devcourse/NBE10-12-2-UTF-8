@@ -81,6 +81,15 @@ public class CustomAuthenticationFilter extends OncePerRequestFilter {
         UUID id = (UUID) payload.get("id");
         String email = (String) payload.get("email");
         String role = (String) payload.get("role");
+
+        // 실시간 DB 정지 조회 및 차단 가드 추가
+        Member dbMember = memberService.findById(id)
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
+
+        if (dbMember.isSuspended()) {
+            throw new ServiceException("403-1", "접근 권한이 없습니다.");
+        }
+
         Member member = new Member(id, email, role);
 
         UserDetails user = new SecurityUser(

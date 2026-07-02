@@ -2,6 +2,7 @@ package com.back.domain.member.member.service;
 
 import com.back.domain.match.matchRequest.dto.MatchHistoryDto;
 import com.back.domain.match.matchRequest.service.MatchRequestService;
+import com.back.domain.member.member.dto.MemberAdmDto;
 import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.repository.MemberRepository;
@@ -114,4 +115,21 @@ public class MemberService {
                 .map(MatchHistoryDto::new)
                 .collect(Collectors.toList());
     }
+
+    @Transactional
+    public MemberAdmDto toggleMemberSuspension(UUID memberId, Member actor) {
+
+        Member targetMember = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
+
+        if (targetMember.getId().equals(actor.getId())) {
+            throw new ServiceException("400-1", "자기 자신은 제재할 수 없습니다.");
+        }
+
+        // 상태 토글 실행 (true <-> false)
+        targetMember.toggleSuspended();
+
+        return new MemberAdmDto(targetMember);
+    }
+
 }
