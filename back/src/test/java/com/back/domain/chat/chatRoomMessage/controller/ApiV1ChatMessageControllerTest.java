@@ -26,7 +26,6 @@ import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static com.back.domain.member.member.entity.Industry.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -53,7 +52,7 @@ public class ApiV1ChatMessageControllerTest {
     private ChatMessageRepository chatMessageRepository;
 
     @Test
-    @DisplayName("메시지 전송 성공")
+    @DisplayName("메시지 전송 성공 - 보낸 채팅")
     void t1() throws Exception {
         // Given
         Member member = memberService.join("user4@test.com", "1234", IT, "USER");
@@ -440,4 +439,85 @@ public class ApiV1ChatMessageControllerTest {
         result.andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.resultCode").value("403-1"));
     }
+
+    @Test
+    @DisplayName("메시지 폴링 - 전체 채팅 흐름")
+    void t15() throws Exception {
+        Member memberA = memberService.join("user6@test.com", "1234", IT, "USER");
+        Member memberB = memberService.join("user7@test.com", "1234", IT, "USER");
+        String tokenA = memberService.genAccessToken(memberA);
+        String tokenB = memberService.genAccessToken(memberB);
+
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        UUID roomId = chatRoom.getId();
+        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, memberA, "익명의 동료1"));
+        chatRoomParticipantRepository.save(new ChatRoomParticipant(chatRoom, memberB, "익명의 동료2"));
+
+        mvc.perform(
+                post("/api/v1/rooms/" + roomId + "/messages")
+                        .cookie(new Cookie("accessToken", tokenA))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "content": "오늘 진짜 야근 미쳤네요."
+                                }
+                                """)
+        ).andDo(print())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.resultCode").value("201-1"))
+                .andExpect(jsonPath("$.data.senderNickname").value("익명의 동료1"))
+                .andExpect(jsonPath("$.data.content").value("오늘 진짜 야근 미쳤네요."));
+        // Step 2: B가 전체 조회 → A 메시지 수신 (isMine: false)
+        String afterFirst = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+
+        mvc.perform(
+                        get("/api/v1/rooms/" + roomId + "/messages")
+                                .cookie(new Cookie("accessToken", tokenB))
+                ).andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.data[0].content").value("오늘 진짜 야근 미쳤네요."))
+                .andExpect(jsonPath("$.data[0].isMine").value(false));
+
+        // Step 3: B가 답장 전송
+        mvc.perform(
+                        post("/api/v1/rooms/" + roomId + "/messages")
+                                .cookie(new Cookie("accessToken", tokenB))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                            {
+                                "content": "저도요... 갑자기 핫픽스 떨어졌어요"
+                            }
+                            """)
+                ).andDo(print())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.resultCode").value("201-1"))
+                .andExpect(jsonPath("$.data.senderNickname").value("익명의 동료2"))
+                .andExpect(jsonPath("$.data.content").value("저도요... 갑자기 핫픽스 떨어졌어요"));
+
+        // Step 4: A가 after 파라미터로 폴링 → B의 답장만 수신 (isMine: false)
+        mvc.perform(
+                        get("/api/v1/rooms/" + roomId + "/messages")
+                                .param("after", afterFirst)
+                                .cookie(new Cookie("accessToken", tokenA))
+                ).andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.data[0].content").value("저도요... 갑자기 핫픽스 떨어졌어요"))
+                .andExpect(jsonPath("$.data[0].isMine").value(false));
+
+        // Step 5: A가 다시 폴링 → 새 메시지 없음 (200-2)
+        String afterSecond = LocalDateTime.now().plusSeconds(5)
+                .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+
+        mvc.perform(
+                        get("/api/v1/rooms/" + roomId + "/messages")
+                                .param("after", afterSecond)
+                                .cookie(new Cookie("accessToken", tokenA))
+                ).andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-2"))
+                .andExpect(jsonPath("$.msg").value("신규 메시지 없음"));
+    }
+
 }
