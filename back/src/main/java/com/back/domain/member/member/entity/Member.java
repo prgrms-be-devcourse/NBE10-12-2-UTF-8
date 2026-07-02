@@ -62,4 +62,8 @@ public class Member extends BaseEntity {
     public void updateIndustry(Industry industry) {
         this.industry = industry;
     }
+
+    public void toggleSuspended() {
+        this.isSuspended = !this.isSuspended;
+    }
 }

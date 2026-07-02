@@ -5,6 +5,7 @@ import com.back.domain.member.member.dto.MemberAdmDto;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.service.MemberService;
 import com.back.global.exception.ServiceException;
+import com.back.global.rq.Rq;
 import com.back.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -24,6 +25,7 @@ import java.util.UUID;
 @SecurityRequirement(name = "bearerAuth")
 public class ApiV1AdmMemberController {
     private final MemberService memberService;
+    private final Rq rq;
 
     @GetMapping
     @Operation(summary = "회원 다건 조회")
@@ -51,6 +53,20 @@ public class ApiV1AdmMemberController {
                 "200-1",
                 "회원 단건 조회 성공",
                 new MemberAdmDto(member)
+        );
+    }
+
+    @PatchMapping("/{memberId}/suspend")
+    @Operation(summary = "회원 제재 상태 변경")
+    public RsData<MemberAdmDto> toggleMemberSuspension(@PathVariable UUID memberId) {
+        Member adminActor = rq.getActor();
+
+        MemberAdmDto responseDto = memberService.toggleMemberSuspension(memberId, adminActor);
+
+        return new RsData<>(
+                "200-1",
+                "계정 정지 상태 토글 성공",
+                responseDto
         );
     }
 }
