@@ -134,7 +134,7 @@ public class ApiV1MatchControllerTest {
     }
 
     @Test
-    @DisplayName("매칭 요청 생성 성공 - industry만 일치 시 MATCHED (2순위)")
+    @DisplayName("매칭 요청 생성 성공 - industry만 일치 시 create 직후 PENDING (2순위)")
     void t3() throws Exception {
         String accessToken1 = signupAndLogin("user1@test.com", "IT/개발");
         String accessToken2 = signupAndLogin("user2@test.com", "IT/개발");
@@ -164,7 +164,7 @@ public class ApiV1MatchControllerTest {
         resultActions
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.resultCode").value("201-1"))
-                .andExpect(jsonPath("$.data.status").value("MATCHED"));
+                .andExpect(jsonPath("$.data.status").value("PENDING"));
     }
 
     @Test

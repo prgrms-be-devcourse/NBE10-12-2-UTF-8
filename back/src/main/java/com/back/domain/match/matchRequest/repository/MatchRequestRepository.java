@@ -12,22 +12,33 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.UUID;
 import java.util.List;
 
 public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID> {
     boolean existsByMemberAndStatus(Member member, MatchStatus status);
 
-    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry AND r.situation = :situation AND r.status = :status")
+    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry AND r.situation = :situation AND r.status = :status ORDER BY r.requestedAt ASC")
     List<MatchRequest> findPendingByIndustryAndSituation(
             @Param("industry") Industry industry,
             @Param("situation") Situation situation,
             @Param("status") MatchStatus status);
 
-    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry  AND r.status = :status")
+    // 같은 업종 + 비슷한 상황 여러개
+    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry AND r.situation IN :situations AND r.status = :status ORDER BY r.requestedAt ASC")
+    List<MatchRequest> findPendingByIndustryAndSituations(
+            @Param("industry") Industry industry,
+            @Param("situations") Collection<Situation> situations,
+            @Param("status") MatchStatus status);
+
+    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry  AND r.status = :status ORDER BY r.requestedAt ASC")
     List<MatchRequest> findPendingByIndustry(
             @Param("industry") Industry industry,
             @Param("status") MatchStatus status);
+
+    @Query("SELECT r FROM MatchRequest r WHERE r.status = :status ORDER BY r.requestedAt ASC")
+    List<MatchRequest> findAllByStatus(@Param("status") MatchStatus status);
 
     @Query("SELECT COUNT(DISTINCT r.room.id) FROM MatchRequest r WHERE r.status = :status AND r.createdAt BETWEEN :start AND :end")
     long countTodayMatches(
