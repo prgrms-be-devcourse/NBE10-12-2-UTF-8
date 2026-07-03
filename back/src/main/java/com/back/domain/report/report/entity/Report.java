@@ -6,6 +6,8 @@ import com.back.global.jpa.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import java.util.UUID;
 import static lombok.AccessLevel.PROTECTED;
 
@@ -16,10 +18,12 @@ public class Report extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reporter_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Member reporter; // 신고자
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reported_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Member reported; // 피신고자
 
     @ManyToOne(fetch = FetchType.LAZY)
