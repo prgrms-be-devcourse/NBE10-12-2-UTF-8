@@ -1,9 +1,7 @@
 package com.back.domain.member.member.entity;
 
 import com.back.global.jpa.entity.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Entity;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
@@ -61,5 +59,9 @@ public class Member extends BaseEntity {
     }
     public void updateIndustry(Industry industry) {
         this.industry = industry;
+    }
+
+    public void toggleSuspended() {
+        this.isSuspended = !this.isSuspended;
     }
 }

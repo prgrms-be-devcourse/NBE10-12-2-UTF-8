@@ -11,25 +11,20 @@ const INDUSTRY_COLORS: Record<string, string> = {
   의료서비스: '#ea4c4c', 유통: '#3b7ff2', '미디어/디자인': '#ea4c4c', 사무업: '#34a06b',
 };
 
-const MATCH_LOG = [
-  { t: '14:32:08', ind: 'IT/개발',      sit: '야근 중',        st: 'MATCHED' },
-  { t: '14:31:55', ind: '서비스업',     sit: '상사 억까',      st: 'MATCHED' },
-  { t: '14:31:40', ind: '사무업',       sit: '회의 폭탄',      st: 'PENDING' },
-  { t: '14:31:22', ind: '금융업',       sit: '연봉 협상 앞둠', st: 'MATCHED' },
-  { t: '14:30:58', ind: '미디어/디자인', sit: '이직 마려움',    st: 'CLOSED'  },
-  { t: '14:30:31', ind: '유통',         sit: '사내 정치 피로', st: 'MATCHED' },
-].map(r => ({
-  ...r,
-  stBg:    r.st === 'MATCHED' ? '#e6f4ea' : r.st === 'PENDING' ? '#fef7e0' : '#f1f3f4',
-  stColor: r.st === 'MATCHED' ? '#137333' : r.st === 'PENDING' ? '#b06000' : '#5f6368',
-}));
+type MatchLog = { matchedAt: string; industry: string; situation: string };
+
+function fmtLogTime(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+}
 
 export default function AdminStatsPage() {
   const router = useRouter();
-  const [stats, setStats] = useState({ totalMembers: 0, todayMatches: 0, activeChatRooms: 0 });
-  const [bars, setBars] = useState<Array<{ key: string; name: string; count: number; color: string; pct: string }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [stats, setStats]         = useState({ totalMembers: 0, todayMatches: 0, activeChatRooms: 0 });
+  const [bars, setBars]           = useState<Array<{ key: string; name: string; count: number; color: string; pct: string }>>([]);
+  const [matchLogs, setMatchLogs] = useState<MatchLog[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState('');
 
   useEffect(() => {
     if (!isAdmin()) { router.replace('/login'); return; }
@@ -47,6 +42,7 @@ export default function AdminStatsPage() {
           color: INDUSTRY_COLORS[s.industry] ?? '#9aa0a6',
           pct: `${Math.round(s.count / max * 100)}%`,
         })));
+        setMatchLogs(data.recentMatchLogs ?? []);
       })
       .catch(() => setError('데이터를 불러오지 못했어요'))
       .finally(() => setLoading(false));
@@ -107,20 +103,19 @@ export default function AdminStatsPage() {
                 ))}
               </div>
 
-              {/* Match log (mock — no API yet) */}
+              {/* Match log */}
               <div style={{ background: '#fff', border: '1px solid #ebebeb', borderRadius: 12, padding: '18px 20px' }}>
                 <div style={{ fontSize: 13, color: '#3c4043', fontWeight: 600, marginBottom: 14 }}>최근 매칭 로그</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr 1.3fr 0.9fr', fontSize: 11, color: '#9aa0a6', paddingBottom: 9, borderBottom: '1px solid #f1f1f1' }}>
-                  <span>시각</span><span>산업군</span><span>상황</span><span style={{ textAlign: 'right' }}>상태</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr 1.3fr', fontSize: 11, color: '#9aa0a6', paddingBottom: 9, borderBottom: '1px solid #f1f1f1' }}>
+                  <span>시각</span><span>산업군</span><span>상황</span>
                 </div>
-                {MATCH_LOG.map((r, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr 1.3fr 0.9fr', alignItems: 'center', fontSize: 12, color: '#3c4043', padding: '8px 0', borderBottom: '1px solid #f6f6f6' }}>
-                    <span style={{ color: '#80868b', fontFamily: 'monospace', fontSize: 11 }}>{r.t}</span>
-                    <span>{r.ind}</span>
-                    <span style={{ color: '#5f6368' }}>{r.sit}</span>
-                    <span style={{ textAlign: 'right' }}>
-                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 9, fontSize: 10.5, fontWeight: 600, background: r.stBg, color: r.stColor }}>{r.st}</span>
-                    </span>
+                {matchLogs.length === 0 ? (
+                  <div style={{ fontSize: 13, color: '#9aa0a6', textAlign: 'center', padding: '20px 0' }}>데이터 없음</div>
+                ) : matchLogs.map((r, i) => (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr 1.3fr', alignItems: 'center', fontSize: 12, color: '#3c4043', padding: '8px 0', borderBottom: '1px solid #f6f6f6' }}>
+                    <span style={{ color: '#80868b', fontFamily: 'monospace', fontSize: 11 }}>{fmtLogTime(r.matchedAt)}</span>
+                    <span>{INDUSTRY_NAMES[r.industry] ?? r.industry}</span>
+                    <span style={{ color: '#5f6368' }}>{r.situation}</span>
                   </div>
                 ))}
               </div>

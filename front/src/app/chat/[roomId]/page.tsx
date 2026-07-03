@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
-  apiGetRoom, apiCloseRoom, apiSendMessage, apiGetMessages, apiGetMe,
+  apiGetRoom, apiCloseRoom, apiSendMessage, apiGetMessages, apiGetMe, apiSubmitReport,
   getToken, INDUSTRY_NAMES, type ChatMsg,
 } from '@/lib/api';
 import { AppShell } from '@/components/AppShell';
@@ -48,6 +48,14 @@ function ClockIcon({ stroke }: { stroke: string }) {
   );
 }
 
+const REPORT_REASONS = [
+  '욕설 / 혐오 발언',
+  '스팸 / 광고',
+  '성희롱 / 음란 발언',
+  '개인정보 유출 시도',
+  '기타',
+];
+
 export default function ChatPage() {
   const router = useRouter();
   const { roomId } = useParams<{ roomId: string }>();
@@ -57,16 +65,22 @@ export default function ChatPage() {
   const [chatTimeLeft, setChatTimeLeft] = useState(600);
   const [situation, setSituation]       = useState('');
   const [userIndustry, setUserIndustry] = useState('');
-  const [isLoggedIn, setIsLoggedIn]     = useState(false);
   const [partnerLeft, setPartnerLeft]   = useState(false);
+  const [chatExpired, setChatExpired]   = useState(false);
+
+  const [reportTarget, setReportTarget]           = useState<ChatMsg | null>(null);
+  const [reportReason, setReportReason]           = useState('');
+  const [reportSubmitting, setReportSubmitting]   = useState(false);
+  const [reportDone, setReportDone]               = useState(false);
 
   const chatTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
   const msgPollRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const seenMsgIds     = useRef<Set<string>>(new Set());
   const lastMsgTimeRef = useRef<string | null>(null);
-  const chatEndRef     = useRef<HTMLDivElement>(null);
   const inputRef       = useRef<HTMLInputElement>(null);
   const isLeavingRef   = useRef(false);
+
+  const chatClosed = chatExpired || partnerLeft;
 
   const stopTimers = useCallback(() => {
     if (chatTimerRef.current) { clearInterval(chatTimerRef.current); chatTimerRef.current = null; }
@@ -88,6 +102,7 @@ export default function ChatPage() {
   }, [roomId, router, stopTimers]);
 
   const send = useCallback(async () => {
+    if (chatClosed) return;
     const content = input.trim();
     if (!content) return;
     setInput('');
@@ -95,20 +110,19 @@ export default function ChatPage() {
       const sent = await apiSendMessage(roomId, content);
       if (!seenMsgIds.current.has(sent.messageId)) {
         seenMsgIds.current.add(sent.messageId);
-        setMessages(prev => [...prev, { ...sent, isMine: true, mine: true }]);
+        setMessages(prev => [...prev, { ...sent, isMine: true }]);
       }
     } catch (err) {
       const status = (err as { status?: number })?.status;
       if (status === 409) notifyPartnerLeft();
       else setInput(content);
     }
-  }, [input, roomId, notifyPartnerLeft]);
+  }, [input, roomId, chatClosed, notifyPartnerLeft]);
 
   useEffect(() => {
     if (!roomId) { router.push('/'); return; }
 
     const token = getToken();
-    setIsLoggedIn(!!token);
     if (!token) { router.push('/login'); return; }
 
     setSituation(localStorage.getItem(SITUATION_KEY) ?? '');
@@ -147,36 +161,52 @@ export default function ChatPage() {
         if (room.status === 'CLOSED') { endChat(); return; }
         const endTime = new Date(room.createdAt).getTime() + 10 * 60 * 1000;
         const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
-        if (remaining <= 0) { endChat(); return; }
+        if (remaining <= 0) { setChatExpired(true); stopTimers(); return; }
         setChatTimeLeft(remaining);
         chatTimerRef.current = setInterval(() => {
           const left = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
           setChatTimeLeft(left);
-          if (left <= 0) endChat();
+          if (left <= 0) { setChatExpired(true); stopTimers(); }
         }, 1000);
       })
       .catch(() => {
         setChatTimeLeft(600);
         chatTimerRef.current = setInterval(() => {
-          setChatTimeLeft(prev => { const n = prev - 1; if (n <= 0) { endChat(); return 0; } return n; });
+          setChatTimeLeft(prev => {
+            const n = prev - 1;
+            if (n <= 0) { setChatExpired(true); stopTimers(); return 0; }
+            return n;
+          });
         }, 1000);
       });
 
     return () => stopTimers();
   }, [roomId]);
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  useEffect(() => { inputRef.current?.focus(); }, []);
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+  const handleReport = async () => {
+    if (!reportTarget || !reportReason) return;
+    setReportSubmitting(true);
+    try {
+      await apiSubmitReport(roomId, reportTarget.messageId, reportReason);
+      setReportDone(true);
+    } catch { /* ignore */ } finally {
+      setReportSubmitting(false);
+    }
+  };
+
+  const closeReportModal = () => {
+    setReportTarget(null);
+    setReportReason('');
+    setReportDone(false);
+  };
 
   const fmtTimer = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   const partnerNickname = messages.find(m => !m.isMine)?.senderNickname ?? '익명의 상대';
+  const displayMessages = [...messages].reverse();
 
   const s = {
     card: { width: 560, background: '#fff', borderRadius: 24, boxShadow: '0 1px 10px rgba(32,33,36,.18)', marginTop: 20 } as const,
@@ -188,7 +218,7 @@ export default function ChatPage() {
   };
 
   return (
-    <AppShell isLoggedIn={isLoggedIn}>
+    <AppShell>
       <div style={{ marginBottom: 18 }}><TangbisilLogo size={52} /></div>
       <div style={s.card}>
         <div style={s.searchRow}>
@@ -199,8 +229,9 @@ export default function ChatPage() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }}
-            placeholder="메시지를 입력하고 Enter"
-            style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: '#3c4043', background: 'transparent' }}
+            disabled={chatClosed}
+            placeholder={chatClosed ? '대화가 종료되었습니다' : '메시지를 입력하고 Enter'}
+            style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: chatClosed ? '#9aa0a6' : '#3c4043', background: 'transparent' }}
           />
           <div style={{ width: 1, height: 24, background: '#dfe1e5', flexShrink: 0 }} />
           <MicIcon />
@@ -226,39 +257,48 @@ export default function ChatPage() {
         </div>
 
         <div style={{ padding: '12px 18px 14px' }}>
-          {partnerLeft && (
+          {chatExpired && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#e8f0fe', border: '1px solid #3b7ff2', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16 }}>⏰</span>
+                <span style={{ fontSize: 13, color: '#1a56c4', fontWeight: 500 }}>10분이 지나 대화가 자동 종료되었습니다</span>
+              </div>
+              <button onClick={endChat} style={{ flexShrink: 0, padding: '5px 14px', background: '#3b7ff2', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>확인</button>
+            </div>
+          )}
+
+          {partnerLeft && !chatExpired && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fff8e1', border: '1px solid #f5b400', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 16 }}>👋</span>
                 <span style={{ fontSize: 13, color: '#5f3e00', fontWeight: 500 }}>상대방이 채팅을 종료했습니다</span>
               </div>
-              <button
-                onClick={endChat}
-                style={{ flexShrink: 0, padding: '5px 14px', background: '#f5b400', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-              >
-                확인
-              </button>
+              <button onClick={endChat} style={{ flexShrink: 0, padding: '5px 14px', background: '#f5b400', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>확인</button>
             </div>
           )}
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 11 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34a06b', display: 'inline-block', animation: 'livePulse 1.8s infinite' }} />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: chatClosed ? '#9aa0a6' : '#34a06b', display: 'inline-block' }} />
               <span style={{ fontSize: 12, color: '#5f6368' }}>
                 <b style={{ color: '#3c4043', fontWeight: 600 }}>{partnerNickname}</b>
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: chatTimeLeft <= 60 ? '#ea4c4c' : '#5f6368', fontWeight: 600 }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="9" stroke={chatTimeLeft <= 60 ? '#ea4c4c' : '#5f6368'} strokeWidth="2" />
-                  <path d="M12 7v5l3 2" stroke={chatTimeLeft <= 60 ? '#ea4c4c' : '#5f6368'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                {fmtTimer(chatTimeLeft)} 남음
-              </span>
-              <span onClick={endChat} style={{ border: '1px solid #f3c0bb', background: '#fef6f5', color: '#c5221f', borderRadius: 14, padding: '4px 13px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                채팅 종료
-              </span>
+              {!chatClosed && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: chatTimeLeft <= 60 ? '#ea4c4c' : '#5f6368', fontWeight: 600 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="9" stroke={chatTimeLeft <= 60 ? '#ea4c4c' : '#5f6368'} strokeWidth="2" />
+                    <path d="M12 7v5l3 2" stroke={chatTimeLeft <= 60 ? '#ea4c4c' : '#5f6368'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {fmtTimer(chatTimeLeft)} 남음
+                </span>
+              )}
+              {!chatClosed && (
+                <span onClick={endChat} style={{ border: '1px solid #f3c0bb', background: '#fef6f5', color: '#c5221f', borderRadius: 14, padding: '4px 13px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  채팅 종료
+                </span>
+              )}
             </div>
           </div>
 
@@ -266,26 +306,81 @@ export default function ChatPage() {
             {messages.length === 0 && (
               <div style={{ padding: '20px 0', textAlign: 'center', fontSize: 13, color: '#bdc1c6' }}>대화를 시작해보세요</div>
             )}
-            {messages.map(msg => (
+            {displayMessages.map(msg => (
               <div
                 key={msg.messageId}
-                style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 16px', borderRadius: 8, background: msg.isMine ? 'transparent' : '#f8f9fa' }}
+                onClick={() => !msg.isMine && setReportTarget(msg)}
+                style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 16px', borderRadius: 8, background: msg.isMine ? 'transparent' : '#f8f9fa', cursor: msg.isMine ? 'default' : 'pointer' }}
+                title={msg.isMine ? undefined : '클릭하여 신고'}
               >
                 <ClockIcon stroke={msg.isMine ? '#3b7ff2' : '#9aa0a6'} />
                 <span style={{ flex: 1, fontSize: 15, color: '#202124' }}>{msg.content}</span>
+                {!msg.isMine && <span style={{ fontSize: 10, color: '#bdc1c6', flexShrink: 0 }}>⚑</span>}
               </div>
             ))}
-            <div ref={chatEndRef} />
           </div>
         </div>
 
         <div style={s.sep} />
 
         <div style={s.hintRow}>
-          <span style={s.hintText}>10분이 지나면 대화는 자동으로 종료돼요</span>
-          <span style={s.hintText}>Enter 전송 · ⚑ 신고</span>
+          <span style={s.hintText}>최신 메시지가 위에 표시됩니다</span>
+          <span style={s.hintText}>Enter 전송 · 상대 메시지 클릭 → 신고</span>
         </div>
       </div>
+
+      {reportTarget && (
+        <div
+          onClick={closeReportModal}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#fff', borderRadius: 16, padding: '26px 28px', width: 380, boxShadow: '0 4px 24px rgba(0,0,0,.18)' }}
+          >
+            {reportDone ? (
+              <>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#202124', marginBottom: 10 }}>신고가 접수되었습니다</div>
+                <div style={{ fontSize: 13, color: '#5f6368', marginBottom: 20 }}>검토 후 조치가 이루어질 예정입니다.</div>
+                <button onClick={closeReportModal} style={{ width: '100%', padding: '10px 0', background: '#3b7ff2', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>확인</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#202124', marginBottom: 6 }}>메시지 신고</div>
+                <div style={{ fontSize: 13, color: '#5f6368', background: '#f8f9fa', borderRadius: 8, padding: '10px 12px', marginBottom: 16, wordBreak: 'break-all' }}>
+                  &ldquo;{reportTarget.content}&rdquo;
+                </div>
+                <div style={{ fontSize: 13, color: '#3c4043', fontWeight: 600, marginBottom: 10 }}>신고 사유</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+                  {REPORT_REASONS.map(r => (
+                    <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: '#202124' }}>
+                      <input
+                        type="radio"
+                        name="reason"
+                        value={r}
+                        checked={reportReason === r}
+                        onChange={() => setReportReason(r)}
+                        style={{ accentColor: '#3b7ff2' }}
+                      />
+                      {r}
+                    </label>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={closeReportModal} style={{ flex: 1, padding: '10px 0', border: '1px solid #dadce0', borderRadius: 8, fontSize: 14, color: '#5f6368', background: '#fff', cursor: 'pointer' }}>취소</button>
+                  <button
+                    onClick={handleReport}
+                    disabled={!reportReason || reportSubmitting}
+                    style={{ flex: 1, padding: '10px 0', background: reportReason ? '#ea4c4c' : '#f1f3f4', color: reportReason ? '#fff' : '#9aa0a6', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: reportReason ? 'pointer' : 'default' }}
+                  >
+                    {reportSubmitting ? '접수 중...' : '신고하기'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

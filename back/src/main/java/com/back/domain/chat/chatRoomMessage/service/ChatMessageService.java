@@ -59,6 +59,24 @@ public class ChatMessageService {
         return new ChatRoomMessageResponseDto(message, sender.getId());
     }
 
+    public ChatMessage getMessage(UUID messageId) {
+        return chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new ServiceException("404-2", "신고 대상 메시지를 찾을 수 없습니다."));
+    }
+
+    public List<ChatMessage> getMessagesByRoom(UUID roomId) {
+        return chatMessageRepository.findByChatRoomIdOrderByCreatedAtDesc(roomId);
+    }
+
+    // 신고 유발 메시지 시점을 기준으로 그 이전에 전송된 대화만 최대 30개 핀포인트 조회
+    public List<ChatMessage> getMessagesBeforeTarget(UUID roomId, UUID targetMessageId) {
+        ChatMessage targetMessage = getMessage(targetMessageId);
+        return chatMessageRepository.findTop30ByChatRoomIdAndCreatedAtLessThanEqualOrderByCreatedAtDesc(
+                roomId,
+                targetMessage.getCreatedAt()
+        );
+    }
+
     public List<ChatRoomMessageResponseDto> getMessages(UUID roomId, Member requester, LocalDateTime after) {
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new ServiceException("404-1", "채팅방을 찾을 수 없습니다."));
@@ -81,5 +99,4 @@ public class ChatMessageService {
                 .map(message -> new ChatRoomMessageResponseDto(message, requester.getId()))
                 .toList();
     }
-
 }

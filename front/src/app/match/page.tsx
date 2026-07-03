@@ -6,8 +6,9 @@ import { apiGetMatch, apiCancelMatch, apiGetMe, getToken, INDUSTRY_NAMES } from 
 import { AppShell } from '@/components/AppShell';
 import { TangbisilLogo } from '@/components/TangbisilLogo';
 
-const MATCH_KEY      = 'tangbisil_match';
-const SITUATION_KEY  = 'tangbisil_situation';
+const MATCH_KEY     = 'tangbisil_match';
+const SITUATION_KEY = 'tangbisil_situation';
+const TIMEOUT_KEY   = 'tangbisil_match_timeout';
 
 function SearchIcon() {
   return (
@@ -52,8 +53,6 @@ export default function MatchPage() {
   const [elapsed, setElapsed]           = useState(0);
   const [situation, setSituation]       = useState('');
   const [userIndustry, setUserIndustry] = useState('');
-  const [isLoggedIn, setIsLoggedIn]     = useState(false);
-
   const matchIdRef      = useRef<string | null>(null);
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const matchPollRef    = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -78,7 +77,6 @@ export default function MatchPage() {
     setSituation(saved.situation);
 
     const token = getToken();
-    setIsLoggedIn(!!token);
     if (token) {
       apiGetMe()
         .then(me => setUserIndustry(INDUSTRY_NAMES[me.industry] ?? me.industry))
@@ -97,7 +95,15 @@ export default function MatchPage() {
           localStorage.removeItem(MATCH_KEY);
           router.push(`/chat/${data.chatRoomId}`);
         }
-      } catch { /* ignore */ }
+      } catch (err) {
+        if ((err as { status?: number })?.status === 404) {
+          clearInterval(matchPollRef.current!);    matchPollRef.current    = null;
+          clearInterval(elapsedTimerRef.current!); elapsedTimerRef.current = null;
+          localStorage.removeItem(MATCH_KEY);
+          localStorage.setItem(TIMEOUT_KEY, '1');
+          router.push('/');
+        }
+      }
     }, 2000);
 
     return () => {
@@ -122,7 +128,7 @@ export default function MatchPage() {
   };
 
   return (
-    <AppShell isLoggedIn={isLoggedIn}>
+    <AppShell>
       <div style={{ marginBottom: 22 }}><TangbisilLogo size={58} /></div>
       <div style={s.card}>
         <div style={s.searchRow}>
