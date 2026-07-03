@@ -6,6 +6,7 @@ import com.back.domain.chat.chatRoom.service.ChatRoomService;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.match.matchRequest.entity.Situation;
+import com.back.domain.match.matchRequest.entity.SituationSimilarity;
 import com.back.domain.match.matchRequest.repository.MatchRequestRepository;
 import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
@@ -14,16 +15,43 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+
 
 @Service
 @RequiredArgsConstructor
 public class MatchRequestService {
     private final MatchRequestRepository matchRequestRepository;
     private final ChatRoomService chatRoomService;
+
+    private static final long TIER1_THRESHOLD_SECONDS = 15; // 15초 후 유사 상황 매칭
+    private static final long TIER2_THRESHOLD_SECONDS = 30; // 30초 후 산업군 전체 매칭
+
+    private List<MatchRequest> findCandidates(Industry industry, Situation situation, long elapsedSeconds) {
+        if(elapsedSeconds < TIER1_THRESHOLD_SECONDS) {
+            return matchRequestRepository.findPendingByIndustryAndSituation(industry, situation, MatchStatus.PENDING);
+        }
+        if(elapsedSeconds <  TIER2_THRESHOLD_SECONDS) {
+            Set<Situation> similarGroup = SituationSimilarity.getSimilarGroup(situation);
+            return matchRequestRepository.findPendingByIndustryAndSituations(industry, similarGroup, MatchStatus.PENDING);
+        }
+        return matchRequestRepository.findPendingByIndustry(industry,  MatchStatus.PENDING);
+    }
+
+    private void connect(MatchRequest matchRequest, MatchRequest other) {
+        ChatRoom chatRoom = chatRoomService.createChatRoom(List.of(matchRequest.getMember(), other.getMember()));
+        matchRequest.matchWith(chatRoom);
+        other.matchWith(chatRoom);
+
+        matchRequestRepository.save(matchRequest);
+        matchRequestRepository.save(other);
+    }
+
 
     @Transactional
     public MatchRequest create(Member member, Situation situation) {
@@ -38,41 +66,34 @@ public class MatchRequestService {
         return matchRequest;
     }
 
-    @Transactional
     public void tryMatch(MatchRequest matchRequest) {
+        if(matchRequest.getStatus() == MatchStatus.MATCHED) {
+            return;
+        }
+
         Industry industry = matchRequest.getMember().getIndustry();
         Situation situation = matchRequest.getSituation();
+        long elapsedSeconds = Duration.between(matchRequest.getRequestedAt(), LocalDateTime.now()).getSeconds();
 
-        Optional<MatchRequest> opponent = matchRequestRepository
-                .findPendingByIndustryAndSituation(industry, situation, MatchStatus.PENDING)
-                .stream()
+        List<MatchRequest> candidates = findCandidates(industry, situation, elapsedSeconds);
+        Optional<MatchRequest> opponent = candidates.stream()
                 .filter(r -> !r.equals(matchRequest))
                 .findFirst();
-        if (opponent.isEmpty()) {
-            opponent = matchRequestRepository
-                    .findPendingByIndustry(industry, MatchStatus.PENDING)
-                    .stream()
-                    .filter(r -> !r.equals(matchRequest))
-                    .findFirst();
-        }
-        opponent.ifPresent(other -> {
-            ChatRoom chatRoom = chatRoomService.createChatRoom(List.of(matchRequest.getMember(), other.getMember()));
-
-            matchRequest.matchWith(chatRoom);
-            other.matchWith(chatRoom);
-
-            matchRequestRepository.save(matchRequest);
-            matchRequestRepository.save(other);
-        });
+        opponent.ifPresent(other -> connect(matchRequest, other));
     }
 
-
+    @Transactional
+    public void retryPendingMatches() {
+        List<MatchRequest> pendingList = matchRequestRepository.findAllByStatus(MatchStatus.PENDING);
+        for(MatchRequest request : pendingList) {
+            tryMatch(request);
+        }
+    }
 
     public MatchRequest findById(UUID id) {
         return matchRequestRepository.findById(id)
                 .orElseThrow(() -> new ServiceException("404-1", "매칭 요청을 찾을 수 없습니다."));
     }
-
 
     @Transactional
     public void cancel(MatchRequest matchRequest, Member actor) {
@@ -96,5 +117,7 @@ public class MatchRequestService {
     public List<MatchRequest> findMatchHistoryByMember(Member member) {
         return matchRequestRepository.findByMemberAndRoomStatus(member, ChatRoomStatus.CLOSED);
     }
+
+
 
 }

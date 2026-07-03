@@ -11,8 +11,14 @@ public class MatchScheduler {
 
     private final MatchRequestService matchRequestService;
 
+    @Scheduled(fixedDelay = 5000)
+    public void retryPendingMatches() {
+        matchRequestService.retryPendingMatches();
+    }
+
     @Scheduled(fixedDelay = 60000)
     public void cancelExpiredMatchRequests() {
         matchRequestService.cancelExpiredRequests();
     }
+
 }
