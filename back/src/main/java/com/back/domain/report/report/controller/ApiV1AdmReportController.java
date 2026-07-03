@@ -1,5 +1,6 @@
 package com.back.domain.report.report.controller;
 
+import com.back.domain.report.report.dto.ReportAdmDetailDto;
 import com.back.domain.report.report.dto.ReportAdmDto;
 import com.back.domain.report.report.service.ReportService;
 import com.back.global.rsData.RsData;
@@ -10,10 +11,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/admin/reports")
@@ -38,6 +38,18 @@ public class ApiV1AdmReportController {
                 "200-1",
                 "신고 목록 조회 성공",
                 reports
+        );
+    }
+
+    @GetMapping("/{reportId}")
+    @Operation(summary = "신고 상세 조회")
+    public RsData<ReportAdmDetailDto> getItem(@PathVariable UUID reportId) {
+        ReportAdmDetailDto reportDetail = reportService.getReportDetailForAdmin(reportId);
+
+        return new RsData<>(
+                "200-1",
+                "신고 상세 조회 성공",
+                reportDetail
         );
     }
 }
