@@ -3,13 +3,11 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'back/**'
 
 jobs:
-  build-and-push:
+  build-and-push-back:
+    if: contains(toJson(github.event.commits), '"back/')
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,23 +18,57 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: 이미지 빌드 & 푸시
+      - name: 백엔드 이미지 빌드 & 푸시
         uses: docker/build-push-action@v5
         with:
           context: ./back
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/nbe10-12-2-utf-8-back:latest
 
-      - name: Railway 재배포 트리거
+      - name: Railway 백엔드 재배포 트리거
         run: |
-         curl -X POST \
-          -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "query": "mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) { serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId) }",
-            "variables": {
-              "serviceId": "${{ secrets.RAILWAY_SERVICE_ID }}",
-              "environmentId": "7bb326a9-c879-4457-a33d-f0605d23ae75"
-            }
-          }' \
-          https://backboard.railway.app/graphql/v2
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) { serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId) }",
+              "variables": {
+                "serviceId": "${{ secrets.RAILWAY_SERVICE_ID }}",
+                "environmentId": "7bb326a9-c879-4457-a33d-f0605d23ae75"
+              }
+            }' \
+            https://backboard.railway.app/graphql/v2
+
+  build-and-push-front:
+    if: contains(toJson(github.event.commits), '"front/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker Hub 로그인
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: 프론트엔드 이미지 빌드 & 푸시
+        uses: docker/build-push-action@v5
+        with:
+          context: ./front
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/nbe10-12-2-utf-8-front:latest
+
+      - name: Railway 프론트 재배포 트리거
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) { serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId) }",
+              "variables": {
+                "serviceId": "2feda8a7-5ab7-4c73-9e39-ce1d9ff6572f",
+                "environmentId": "7bb326a9-c879-4457-a33d-f0605d23ae75"
+              }
+            }' \
+            https://backboard.railway.app/graphql/v2
