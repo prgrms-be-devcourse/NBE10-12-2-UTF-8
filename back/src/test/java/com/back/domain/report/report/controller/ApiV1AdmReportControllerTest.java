@@ -323,5 +323,48 @@ public class ApiV1AdmReportControllerTest {
         // Then - 403 Forbidden 차단 검증
         resultActions.andExpect(status().isForbidden());
     }
+
+    @Test
+    @DisplayName("존재하지 않는 신고 ID로 처리 상태 수정 요청 시 404-1 에러 반환")
+    void t6() throws Exception {
+        // Given - 관리자 로그인
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "admin@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        // Given - 임의의 존재하지 않는 신고 ID 생성
+        UUID nonExistentId = UUID.randomUUID();
+
+        // When - PATCH 처리 상태 토글 요청
+        ResultActions resultActions = mvc
+                .perform(
+                        patch("/api/v1/admin/reports/" + nonExistentId + "/status")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        // Then - 404 Not Found 및 404-1 에러 검증
+        resultActions
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.resultCode").value("404-1"))
+                .andExpect(jsonPath("$.msg").value("존재하지 않는 신고서입니다."));
+    }
 }
+
 
