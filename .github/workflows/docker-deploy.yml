@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-push-back:
-    if: contains(toJson(github.event.commits), '"back/')
+    if: github.event_name == 'workflow_dispatch' || contains(toJson(github.event.commits), '"back/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,7 +41,7 @@ jobs:
             https://backboard.railway.app/graphql/v2
 
   build-and-push-front:
-    if: contains(toJson(github.event.commits), '"front/')
+    if: github.event_name == 'workflow_dispatch' || contains(toJson(github.event.commits), '"front/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
