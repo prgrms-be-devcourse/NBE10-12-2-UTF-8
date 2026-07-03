@@ -16,6 +16,7 @@ import java.util.UUID;
 @Entity
 @Getter
 @NoArgsConstructor
+@Table(name = "Member", uniqueConstraints =@UniqueConstraint(columnNames = {"provider", "provider_id"}))
 public class Member extends BaseEntity {
     @Column(unique = true)
     private String email;
@@ -26,6 +27,7 @@ public class Member extends BaseEntity {
     @Column(unique = true)
     private UUID refreshToken;
     private LocalDateTime refreshTokenExpiresAt;
+    @Enumerated(EnumType.STRING)
     private AuthProvider provider;
     private String providerId;
 
@@ -41,6 +43,16 @@ public class Member extends BaseEntity {
         this.industry = industry;
         this.role = role;
         this.isSuspended = false;
+    }
+
+    public static Member ofOAuth(String email, AuthProvider provider, String providerId){
+        Member member = new Member();
+        member.email = email;
+        member.provider = provider;
+        member.providerId = providerId;
+        member.role = "USER";
+
+        return member;
     }
 
     public void updateRefreshToken(UUID refreshToken) {
