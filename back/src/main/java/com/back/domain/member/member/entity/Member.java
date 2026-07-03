@@ -37,12 +37,23 @@ public class Member extends BaseEntity {
         this.role = role;
     }
 
-    public Member(String email, String password, Industry industry, String role) {
+    public Member(String email, String password, Industry industry, String role, AuthProvider provider) {
         this.email = email;
         this.password = password;
         this.industry = industry;
         this.role = role;
         this.isSuspended = false;
+        this.provider = AuthProvider.LOCAL;
+    }
+
+    public static Member ofOAuth(String email, AuthProvider provider, String providerId){
+        Member member = new Member();
+        member.email = email;
+        member.provider = provider;
+        member.providerId = providerId;
+        member.role = "USER";
+
+        return member;
     }
 
     public static Member ofOAuth(String email, AuthProvider provider, String providerId){
