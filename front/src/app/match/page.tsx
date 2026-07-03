@@ -52,8 +52,6 @@ export default function MatchPage() {
   const [elapsed, setElapsed]           = useState(0);
   const [situation, setSituation]       = useState('');
   const [userIndustry, setUserIndustry] = useState('');
-  const [isLoggedIn, setIsLoggedIn]     = useState(false);
-
   const matchIdRef      = useRef<string | null>(null);
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const matchPollRef    = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -78,7 +76,6 @@ export default function MatchPage() {
     setSituation(saved.situation);
 
     const token = getToken();
-    setIsLoggedIn(!!token);
     if (token) {
       apiGetMe()
         .then(me => setUserIndustry(INDUSTRY_NAMES[me.industry] ?? me.industry))
@@ -122,7 +119,7 @@ export default function MatchPage() {
   };
 
   return (
-    <AppShell isLoggedIn={isLoggedIn}>
+    <AppShell>
       <div style={{ marginBottom: 22 }}><TangbisilLogo size={58} /></div>
       <div style={s.card}>
         <div style={s.searchRow}>

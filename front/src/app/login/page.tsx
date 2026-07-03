@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiLogin, setTokens, setAdmin, getRoleFromToken } from '@/lib/api';
+import { apiLogin, apiGetActiveRoom, setTokens, setAdmin, getRoleFromToken } from '@/lib/api';
 
 const LOGO_CHARS = [
   { c: 'T', color: '#3b7ff2' }, { c: 'a', color: '#ea4c4c' }, { c: 'n', color: '#f5b400' },
@@ -37,9 +37,18 @@ export default function LoginPage() {
       if (getRoleFromToken(data.accessToken) === 'ADMIN') {
         setAdmin();
         router.replace('/admin/stats');
-      } else {
-        router.replace('/');
+        return;
       }
+      try {
+        await apiGetActiveRoom();
+      } catch (checkErr: unknown) {
+        if ((checkErr as { status?: number })?.status === 403) {
+          localStorage.setItem('tangbisil_suspended', '1');
+          router.replace('/me');
+          return;
+        }
+      }
+      router.replace('/');
     } catch {
       setError('이메일 또는 비밀번호가 올바르지 않아요');
     } finally {

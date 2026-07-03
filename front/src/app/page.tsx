@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   apiCreateMatch, apiGetMatch, apiGetActiveRoom,
   apiGetMe, getToken, INDUSTRY_NAMES,
@@ -9,7 +10,8 @@ import {
 import { AppShell } from '@/components/AppShell';
 import { TangbisilLogo } from '@/components/TangbisilLogo';
 
-const MATCH_KEY = 'tangbisil_match';
+const MATCH_KEY   = 'tangbisil_match';
+const TIMEOUT_KEY = 'tangbisil_match_timeout';
 
 const TOPICS = [
   { label: '야근 중',        count: '3.2천' },
@@ -65,16 +67,21 @@ function LockIcon() {
 
 export default function HomePage() {
   const router = useRouter();
-  const [preClick, setPreClick]             = useState(true);
-  const [situation, setSituation]           = useState('');
-  const [selectedTopic, setSelectedTopic]   = useState<string | null>(null);
-  const [userIndustry, setUserIndustry]     = useState('');
-  const [isLoggedIn, setIsLoggedIn]         = useState(false);
-  const [matchError, setMatchError]         = useState('');
+  const [preClick, setPreClick]           = useState(true);
+  const [situation, setSituation]         = useState('');
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [userIndustry, setUserIndustry]   = useState('');
+  const [matchError, setMatchError]       = useState('');
+  const [showTimeout, setShowTimeout]     = useState(false);
 
   useEffect(() => {
+    const timeoutFlag = localStorage.getItem(TIMEOUT_KEY);
+    if (timeoutFlag) {
+      localStorage.removeItem(TIMEOUT_KEY);
+      setShowTimeout(true);
+    }
+
     const token = getToken();
-    setIsLoggedIn(!!token);
     if (!token) return;
 
     apiGetMe()
@@ -102,11 +109,16 @@ export default function HomePage() {
           })
           .catch(() => localStorage.removeItem(MATCH_KEY));
       })
-      .catch(() => {});
+      .catch((err: unknown) => {
+        if ((err as { status?: number })?.status === 403) {
+          localStorage.setItem('tangbisil_suspended', '1');
+          router.replace('/me');
+        }
+      });
   }, []);
 
   const startMatch = useCallback(async () => {
-    if (!getToken()) { router.push('/login'); return; }
+    if (!getToken()) { setMatchError('LOGIN_REQUIRED'); return; }
     if (!selectedTopic) { setMatchError('상황 칩을 선택해주세요'); return; }
     setMatchError('');
     try {
@@ -139,16 +151,18 @@ export default function HomePage() {
     hintText: { fontSize: 11, color: '#bdc1c6' } as const,
   };
 
-  // Single unified layout — logo and search bar never move between A0 and A states.
-  // Only content below the search row appears/disappears, growing the card downward.
   return (
-    <AppShell isLoggedIn={isLoggedIn} topAlign>
-      {/* Logo — same size and position in both preClick and !preClick */}
+    <AppShell topAlign>
       <TangbisilLogo size={58} />
 
-      {/* Card — always rendered at same marginTop so search bar never shifts */}
+      {showTimeout && (
+        <div style={{ width: 560, marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fef7e0', border: '1px solid #f5b400', borderRadius: 12, padding: '10px 16px' }}>
+          <span style={{ fontSize: 13, color: '#5f3e00' }}>매칭 시간이 초과됐어요. 다시 시도해보세요.</span>
+          <button onClick={() => setShowTimeout(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}><XIcon /></button>
+        </div>
+      )}
+
       <div style={s.card}>
-        {/* Search row — identical DOM position in A0 and A */}
         <div style={s.searchRow}>
           <SearchIcon onClick={preClick ? () => setPreClick(false) : startMatch} />
           {preClick ? (
@@ -179,7 +193,6 @@ export default function HomePage() {
 
         <div style={s.sep} />
 
-        {/* Expandable section — only rendered in A state, grows card downward */}
         {!preClick && (
           <>
             <div style={s.industryRow}>
@@ -217,16 +230,20 @@ export default function HomePage() {
                   );
                 })}
               </div>
-              {matchError && (
+              {matchError === 'LOGIN_REQUIRED' ? (
+                <div style={{ marginTop: 10, fontSize: 12, color: '#5f6368' }}>
+                  매칭하려면 로그인이 필요해요.{' '}
+                  <Link href="/login" style={{ color: '#3b7ff2', fontWeight: 600, textDecoration: 'none' }}>로그인하기 →</Link>
+                </div>
+              ) : matchError ? (
                 <div style={{ marginTop: 10, fontSize: 12, color: '#ea4c4c' }}>{matchError}</div>
-              )}
+              ) : null}
             </div>
 
             <div style={s.sep} />
           </>
         )}
 
-        {/* Hint row — always shown, text changes per state */}
         <div style={s.hintRow}>
           {preClick ? (
             <span style={{ ...s.hintText, display: 'flex', alignItems: 'center', gap: 5 }}>

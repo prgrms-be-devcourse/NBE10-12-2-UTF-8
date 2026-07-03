@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
-  apiGetRoom, apiCloseRoom, apiSendMessage, apiGetMessages, apiGetMe,
+  apiGetRoom, apiCloseRoom, apiSendMessage, apiGetMessages, apiGetMe, apiSubmitReport,
   getToken, INDUSTRY_NAMES, type ChatMsg,
 } from '@/lib/api';
 import { AppShell } from '@/components/AppShell';
@@ -57,16 +57,23 @@ export default function ChatPage() {
   const [chatTimeLeft, setChatTimeLeft] = useState(600);
   const [situation, setSituation]       = useState('');
   const [userIndustry, setUserIndustry] = useState('');
-  const [isLoggedIn, setIsLoggedIn]     = useState(false);
   const [partnerLeft, setPartnerLeft]   = useState(false);
+  const [chatExpired, setChatExpired]   = useState(false);
+
+  const [showReport, setShowReport]       = useState(false);
+  const [reportMsgId, setReportMsgId]     = useState<string | null>(null);
+  const [reportReason, setReportReason]   = useState('');
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError]     = useState('');
 
   const chatTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
   const msgPollRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const seenMsgIds     = useRef<Set<string>>(new Set());
   const lastMsgTimeRef = useRef<string | null>(null);
-  const chatEndRef     = useRef<HTMLDivElement>(null);
   const inputRef       = useRef<HTMLInputElement>(null);
   const isLeavingRef   = useRef(false);
+
+  const chatClosed = chatExpired || partnerLeft;
 
   const stopTimers = useCallback(() => {
     if (chatTimerRef.current) { clearInterval(chatTimerRef.current); chatTimerRef.current = null; }
@@ -88,6 +95,7 @@ export default function ChatPage() {
   }, [roomId, router, stopTimers]);
 
   const send = useCallback(async () => {
+    if (chatClosed) return;
     const content = input.trim();
     if (!content) return;
     setInput('');
@@ -95,20 +103,19 @@ export default function ChatPage() {
       const sent = await apiSendMessage(roomId, content);
       if (!seenMsgIds.current.has(sent.messageId)) {
         seenMsgIds.current.add(sent.messageId);
-        setMessages(prev => [...prev, { ...sent, isMine: true, mine: true }]);
+        setMessages(prev => [...prev, { ...sent, isMine: true }]);
       }
     } catch (err) {
       const status = (err as { status?: number })?.status;
       if (status === 409) notifyPartnerLeft();
       else setInput(content);
     }
-  }, [input, roomId, notifyPartnerLeft]);
+  }, [input, roomId, chatClosed, notifyPartnerLeft]);
 
   useEffect(() => {
     if (!roomId) { router.push('/'); return; }
 
     const token = getToken();
-    setIsLoggedIn(!!token);
     if (!token) { router.push('/login'); return; }
 
     setSituation(localStorage.getItem(SITUATION_KEY) ?? '');
@@ -147,18 +154,22 @@ export default function ChatPage() {
         if (room.status === 'CLOSED') { endChat(); return; }
         const endTime = new Date(room.createdAt).getTime() + 10 * 60 * 1000;
         const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
-        if (remaining <= 0) { endChat(); return; }
+        if (remaining <= 0) { stopTimers(); setChatExpired(true); return; }
         setChatTimeLeft(remaining);
         chatTimerRef.current = setInterval(() => {
           const left = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
           setChatTimeLeft(left);
-          if (left <= 0) endChat();
+          if (left <= 0) { stopTimers(); setChatExpired(true); }
         }, 1000);
       })
       .catch(() => {
         setChatTimeLeft(600);
         chatTimerRef.current = setInterval(() => {
-          setChatTimeLeft(prev => { const n = prev - 1; if (n <= 0) { endChat(); return 0; } return n; });
+          setChatTimeLeft(prev => {
+            const n = prev - 1;
+            if (n <= 0) { stopTimers(); setChatExpired(true); return 0; }
+            return n;
+          });
         }, 1000);
       });
 
@@ -166,17 +177,30 @@ export default function ChatPage() {
   }, [roomId]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!chatClosed) inputRef.current?.focus();
+  }, [chatClosed]);
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+  const submitReport = async () => {
+    if (!reportMsgId || !reportReason.trim()) return;
+    setReportLoading(true);
+    setReportError('');
+    try {
+      await apiSubmitReport(roomId, reportMsgId, reportReason.trim());
+      setShowReport(false);
+      setReportMsgId(null);
+      setReportReason('');
+    } catch (err: unknown) {
+      setReportError((err as Error)?.message ?? '신고에 실패했어요');
+    } finally {
+      setReportLoading(false);
+    }
+  };
 
   const fmtTimer = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   const partnerNickname = messages.find(m => !m.isMine)?.senderNickname ?? '익명의 상대';
+  const reportableMessages = messages.filter(m => !m.isMine);
 
   const s = {
     card: { width: 560, background: '#fff', borderRadius: 24, boxShadow: '0 1px 10px rgba(32,33,36,.18)', marginTop: 20 } as const,
@@ -188,7 +212,7 @@ export default function ChatPage() {
   };
 
   return (
-    <AppShell isLoggedIn={isLoggedIn}>
+    <AppShell>
       <div style={{ marginBottom: 18 }}><TangbisilLogo size={52} /></div>
       <div style={s.card}>
         <div style={s.searchRow}>
@@ -199,8 +223,9 @@ export default function ChatPage() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }}
-            placeholder="메시지를 입력하고 Enter"
-            style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: '#3c4043', background: 'transparent' }}
+            placeholder={chatClosed ? '대화가 종료됐어요' : '메시지를 입력하고 Enter'}
+            disabled={chatClosed}
+            style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: chatClosed ? '#9aa0a6' : '#3c4043', background: 'transparent', cursor: chatClosed ? 'not-allowed' : 'text' }}
           />
           <div style={{ width: 1, height: 24, background: '#dfe1e5', flexShrink: 0 }} />
           <MicIcon />
@@ -232,18 +257,23 @@ export default function ChatPage() {
                 <span style={{ fontSize: 16 }}>👋</span>
                 <span style={{ fontSize: 13, color: '#5f3e00', fontWeight: 500 }}>상대방이 채팅을 종료했습니다</span>
               </div>
-              <button
-                onClick={endChat}
-                style={{ flexShrink: 0, padding: '5px 14px', background: '#f5b400', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-              >
-                확인
-              </button>
+              <button onClick={endChat} style={{ flexShrink: 0, padding: '5px 14px', background: '#f5b400', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>확인</button>
+            </div>
+          )}
+
+          {chatExpired && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#e8f0fe', border: '1px solid #3b7ff2', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16 }}>⏰</span>
+                <span style={{ fontSize: 13, color: '#1a56c4', fontWeight: 500 }}>10분이 지나 채팅이 종료됐어요</span>
+              </div>
+              <button onClick={endChat} style={{ flexShrink: 0, padding: '5px 14px', background: '#3b7ff2', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>확인</button>
             </div>
           )}
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 11 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34a06b', display: 'inline-block', animation: 'livePulse 1.8s infinite' }} />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: chatClosed ? '#9aa0a6' : '#34a06b', display: 'inline-block', animation: chatClosed ? 'none' : 'livePulse 1.8s infinite' }} />
               <span style={{ fontSize: 12, color: '#5f6368' }}>
                 <b style={{ color: '#3c4043', fontWeight: 600 }}>{partnerNickname}</b>
               </span>
@@ -256,9 +286,11 @@ export default function ChatPage() {
                 </svg>
                 {fmtTimer(chatTimeLeft)} 남음
               </span>
-              <span onClick={endChat} style={{ border: '1px solid #f3c0bb', background: '#fef6f5', color: '#c5221f', borderRadius: 14, padding: '4px 13px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                채팅 종료
-              </span>
+              {!chatClosed && (
+                <span onClick={endChat} style={{ border: '1px solid #f3c0bb', background: '#fef6f5', color: '#c5221f', borderRadius: 14, padding: '4px 13px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  채팅 종료
+                </span>
+              )}
             </div>
           </div>
 
@@ -266,7 +298,7 @@ export default function ChatPage() {
             {messages.length === 0 && (
               <div style={{ padding: '20px 0', textAlign: 'center', fontSize: 13, color: '#bdc1c6' }}>대화를 시작해보세요</div>
             )}
-            {messages.map(msg => (
+            {[...messages].reverse().map(msg => (
               <div
                 key={msg.messageId}
                 style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 16px', borderRadius: 8, background: msg.isMine ? 'transparent' : '#f8f9fa' }}
@@ -275,7 +307,6 @@ export default function ChatPage() {
                 <span style={{ flex: 1, fontSize: 15, color: '#202124' }}>{msg.content}</span>
               </div>
             ))}
-            <div ref={chatEndRef} />
           </div>
         </div>
 
@@ -283,9 +314,66 @@ export default function ChatPage() {
 
         <div style={s.hintRow}>
           <span style={s.hintText}>10분이 지나면 대화는 자동으로 종료돼요</span>
-          <span style={s.hintText}>Enter 전송 · ⚑ 신고</span>
+          {reportableMessages.length > 0 && (
+            <span
+              onClick={() => { setShowReport(true); setReportError(''); }}
+              style={{ ...s.hintText, color: '#ea4c4c', cursor: 'pointer', fontWeight: 600 }}
+            >
+              ⚑ 신고
+            </span>
+          )}
         </div>
       </div>
+
+      {showReport && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ width: 440, background: '#fff', borderRadius: 16, padding: '24px 24px 20px', boxShadow: '0 8px 40px rgba(0,0,0,.2)' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#202124', marginBottom: 4 }}>신고하기</div>
+            <div style={{ fontSize: 13, color: '#9aa0a6', marginBottom: 16 }}>신고할 메시지를 선택하고 사유를 입력해주세요</div>
+
+            <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+              {reportableMessages.map(msg => (
+                <div
+                  key={msg.messageId}
+                  onClick={() => setReportMsgId(msg.messageId)}
+                  style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${reportMsgId === msg.messageId ? '#ea4c4c' : '#e8eaed'}`, background: reportMsgId === msg.messageId ? '#fce8e6' : '#f8f9fa', cursor: 'pointer' }}
+                >
+                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${reportMsgId === msg.messageId ? '#ea4c4c' : '#dadce0'}`, background: reportMsgId === msg.messageId ? '#ea4c4c' : '#fff', flexShrink: 0, marginTop: 2 }} />
+                  <span style={{ fontSize: 14, color: '#202124', lineHeight: 1.5 }}>{msg.content}</span>
+                </div>
+              ))}
+            </div>
+
+            <textarea
+              value={reportReason}
+              onChange={e => setReportReason(e.target.value)}
+              placeholder="신고 사유를 입력해주세요 (최대 500자)"
+              maxLength={500}
+              style={{ width: '100%', height: 80, border: '1px solid #dadce0', borderRadius: 8, padding: '10px 12px', fontSize: 14, color: '#202124', resize: 'none', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            />
+
+            {reportError && (
+              <div style={{ fontSize: 12, color: '#ea4c4c', marginTop: 6 }}>{reportError}</div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
+              <button
+                onClick={() => { setShowReport(false); setReportMsgId(null); setReportReason(''); setReportError(''); }}
+                style={{ padding: '8px 18px', border: '1px solid #dadce0', borderRadius: 8, fontSize: 14, color: '#5f6368', background: '#fff', cursor: 'pointer' }}
+              >
+                취소
+              </button>
+              <button
+                onClick={submitReport}
+                disabled={reportLoading || !reportMsgId || !reportReason.trim()}
+                style={{ padding: '8px 18px', background: reportLoading || !reportMsgId || !reportReason.trim() ? '#9aa0a6' : '#ea4c4c', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: reportLoading || !reportMsgId || !reportReason.trim() ? 'default' : 'pointer' }}
+              >
+                {reportLoading ? '신고 중...' : '신고하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

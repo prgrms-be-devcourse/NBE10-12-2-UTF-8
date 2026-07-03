@@ -1,8 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { apiGetMe, apiUpdateMe, apiLogout, apiDeleteMe, clearTokens, INDUSTRY_NAMES, INDUSTRY_CODES } from '@/lib/api';
+
+const CONTACT_URL = 'https://www.google.com/search?q=%EB%A9%94%EB%A1%B1&oq=%EB%A9%94%EB%A1%B1&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQRRg90gEINDM5NGowajeoAgCwAgA&sourceid=chrome&ie=UTF-8';
 
 const INDUSTRIES = [
   { name: 'IT/개발',       color: '#3b7ff2' },
@@ -29,13 +32,20 @@ function TangbisilLogo({ size = 24 }: { size?: number }) {
 
 export default function MyPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [current, setCurrent] = useState('IT/개발');
-  const [saved, setSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [email, setEmail]         = useState('');
+  const [current, setCurrent]     = useState('IT/개발');
+  const [saved, setSaved]         = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const [loading, setLoading]     = useState(true);
+  const [suspended, setSuspended] = useState(false);
 
   useEffect(() => {
+    if (localStorage.getItem('tangbisil_suspended')) {
+      localStorage.removeItem('tangbisil_suspended');
+      setSuspended(true);
+      setLoading(false);
+      return;
+    }
     apiGetMe()
       .then(data => {
         setEmail(data.email);
@@ -74,9 +84,41 @@ export default function MyPage() {
     </div>
   );
 
+  if (suspended) return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff', fontFamily: "Arial, 'Helvetica Neue', sans-serif", gap: 16 }}>
+      <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#fce8e6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="#c5221f" strokeWidth="2" />
+          <line x1="12" y1="8" x2="12" y2="13" stroke="#c5221f" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="12" cy="16" r="1" fill="#c5221f" />
+        </svg>
+      </div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#202124' }}>계정이 정지됐습니다</div>
+      <div style={{ fontSize: 14, color: '#5f6368', textAlign: 'center', lineHeight: 1.6 }}>
+        관리자에 의해 계정이 정지되었어요.<br />
+        문의를 통해 사유를 확인하고 해제를 요청하세요.
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+        <a
+          href={CONTACT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ padding: '10px 22px', background: '#3b7ff2', color: '#fff', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}
+        >
+          문의하기
+        </a>
+        <button
+          onClick={handleLogout}
+          style={{ padding: '10px 22px', border: '1px solid #dadce0', borderRadius: 8, fontSize: 14, color: '#5f6368', background: '#fff', cursor: 'pointer' }}
+        >
+          로그아웃
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#fff', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
-      {/* Header */}
       <div style={{ height: 54, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 30px', borderBottom: '1px solid #ebebeb' }}>
         <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <TangbisilLogo size={24} />
@@ -85,7 +127,6 @@ export default function MyPage() {
       </div>
 
       <div style={{ flex: 1, padding: '34px 40px', maxWidth: 700, margin: '0 auto', width: '100%' }}>
-        {/* Profile */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 30 }}>
           <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#e8f0fe', color: '#3b7ff2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 700 }}>동</div>
           <div>
@@ -94,19 +135,20 @@ export default function MyPage() {
           </div>
         </div>
 
-        {/* Info card */}
         <div style={{ border: '1px solid #ebebeb', borderRadius: 12, overflow: 'hidden', marginBottom: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #f1f1f1' }}>
             <span style={{ fontSize: 13, color: '#5f6368' }}>이메일</span>
             <span style={{ fontSize: 14, color: '#202124' }}>{email}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px' }}>
-            <span style={{ fontSize: 13, color: '#5f6368' }}>가입일</span>
-            <span style={{ fontSize: 14, color: '#202124' }}>2026-06-21</span>
-          </div>
+          <Link
+            href="/me/history"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', textDecoration: 'none', color: 'inherit' }}
+          >
+            <span style={{ fontSize: 13, color: '#5f6368' }}>매칭 이력</span>
+            <span style={{ fontSize: 13, color: '#3b7ff2', fontWeight: 600 }}>보기 →</span>
+          </Link>
         </div>
 
-        {/* Industry change */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 }}>
           <span style={{ fontSize: 13, color: '#3c4043', fontWeight: 600 }}>산업군 변경</span>
           <span style={{ fontSize: 11.5, color: '#9aa0a6' }}>현재 · {current}</span>
@@ -136,7 +178,6 @@ export default function MyPage() {
           </button>
         </div>
 
-        {/* Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             onClick={handleLogout}

@@ -1,6 +1,15 @@
-import Link from 'next/link';
+'use client';
 
-export function AppShell({ isLoggedIn, children, topAlign = false }: { isLoggedIn: boolean; children: React.ReactNode; topAlign?: boolean }) {
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { getToken } from '@/lib/api';
+
+export function AppShell({ children, topAlign = false }: { children: React.ReactNode; topAlign?: boolean }) {
+  const pathname = usePathname();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  useEffect(() => { setIsLoggedIn(!!getToken()); }, [pathname]);
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#fff', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
       <div style={{ height: 50, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 18, padding: '0 22px' }}>

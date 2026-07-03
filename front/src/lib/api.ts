@@ -170,7 +170,6 @@ export type ChatMsg = {
   senderNickname: string;
   content: string;
   createdAt: string;
-  mine: boolean;
   isMine: boolean;
 };
 
@@ -206,6 +205,7 @@ export type AdminMember = {
   industry: string;
   isSuspended: boolean;
   createdAt: string;
+  role?: string;
 };
 
 export const apiGetDashboard = () =>
@@ -216,7 +216,8 @@ export const apiGetDashboard = () =>
       activeChatRooms: number;
     };
     industryStatistics: Array<{ industry: string; count: number }>;
-  }>("/api/v1/adm/dashboard");
+    recentMatchLogs: Array<{ matchedAt: string; industry: string; situation: string }>;
+  }>("/api/v1/admin/dashboard");
 
 export const apiGetAdminMembers = (page = 0, size = 10) =>
   req<{
@@ -224,7 +225,51 @@ export const apiGetAdminMembers = (page = 0, size = 10) =>
     totalPages: number;
     totalElements: number;
     pageable: { pageNumber: number; pageSize: number };
-  }>(`/api/v1/adm/members?page=${page}&size=${size}`);
+  }>(`/api/v1/admin/members?page=${page}&size=${size}`);
 
-export const apiGetAdminMember = (memberId: string) =>
-  req<AdminMember>(`/api/v1/adm/members/${memberId}`);
+export const apiGetAdminMember = (identifier: string) =>
+  req<AdminMember>(`/api/v1/admin/members/${identifier}`);
+
+export const apiSuspendMember = (memberId: string) =>
+  req<AdminMember>(`/api/v1/admin/members/${memberId}/suspend`, { method: 'PATCH' });
+
+/* ── Reports ────────────────────────────────────────────────────── */
+export type ReportResult = {
+  reportId: string;
+  status: 'PENDING' | 'RESOLVED';
+  createdAt: string;
+};
+
+export const apiSubmitReport = (roomId: string, reportedMessageId: string, reason: string) =>
+  req<ReportResult>('/api/v1/reports', {
+    method: 'POST',
+    body: JSON.stringify({ roomId, reportedMessageId, reason }),
+  });
+
+export type AdminReport = {
+  reportId: string;
+  reporterEmail: string;
+  reportedEmail: string;
+  reason: string;
+  status: 'PENDING' | 'RESOLVED';
+  createdAt: string;
+};
+
+export type AdminReportDetail = AdminReport & {
+  reportedMessages: Array<{
+    senderNickname: string;
+    senderLabel: string;
+    content: string;
+    sentAt: string;
+    isTarget: boolean;
+  }>;
+};
+
+export const apiGetAdminReports = (page = 0, size = 10) =>
+  req<{
+    content: AdminReport[];
+    pageable: { pageNumber: number; pageSize: number; totalElements: number; totalPages: number };
+  }>(`/api/v1/admin/reports?page=${page}&size=${size}`);
+
+export const apiGetAdminReport = (reportId: string) =>
+  req<AdminReportDetail>(`/api/v1/admin/reports/${reportId}`);
