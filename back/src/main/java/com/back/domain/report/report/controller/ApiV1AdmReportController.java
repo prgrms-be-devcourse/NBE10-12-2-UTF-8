@@ -2,6 +2,7 @@ package com.back.domain.report.report.controller;
 
 import com.back.domain.report.report.dto.ReportAdmDetailDto;
 import com.back.domain.report.report.dto.ReportAdmDto;
+import com.back.domain.report.report.dto.ReportStatusUpdateDto;
 import com.back.domain.report.report.service.ReportService;
 import com.back.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
@@ -50,6 +51,18 @@ public class ApiV1AdmReportController {
                 "200-1",
                 "신고 상세 조회 성공",
                 reportDetail
+        );
+    }
+
+    @PatchMapping("/{reportId}/status")
+    @Operation(summary = "신고서 처리 상태 수정")
+    public RsData<ReportStatusUpdateDto> toggleStatus(@PathVariable UUID reportId) {
+        ReportStatusUpdateDto statusUpdate = reportService.toggleReportStatus(reportId);
+
+        return new RsData<>(
+                "200-1",
+                "신고서 처리 상태 수정 성공",
+                statusUpdate
         );
     }
 }

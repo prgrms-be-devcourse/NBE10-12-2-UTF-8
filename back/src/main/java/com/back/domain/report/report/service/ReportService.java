@@ -8,6 +8,7 @@ import com.back.domain.chat.chatRoomParticipant.entity.ChatRoomParticipant;
 import com.back.domain.chat.chatRoomParticipant.service.ChatRoomParticipantService;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.report.report.dto.ReportAdmDetailDto;
+import com.back.domain.report.report.dto.ReportStatusUpdateDto;
 import com.back.domain.report.report.entity.Report;
 import com.back.domain.report.report.entity.ReportedMessage;
 import com.back.domain.report.report.event.ReportCreatedEvent;
@@ -132,5 +133,16 @@ public class ReportService {
         }
 
         return new ReportAdmDetailDto(report, messageDtos);
+    }
+
+    // 특정 신고서 처리 상태 수정 토글
+    @Transactional
+    public ReportStatusUpdateDto toggleReportStatus(UUID reportId) {
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 신고서입니다."));
+
+        report.toggleStatus();
+
+        return new ReportStatusUpdateDto(report.getId(), report.getStatus());
     }
 }

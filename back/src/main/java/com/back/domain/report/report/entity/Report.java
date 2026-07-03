@@ -48,4 +48,11 @@ public class Report extends BaseEntity {
         this.reason = reason;
         this.status = ReportStatus.PENDING;
     }
+
+    // PENDING | PROCESSED 처리 상태 토글
+    public void toggleStatus() {
+        this.status = (this.status == ReportStatus.PENDING)
+                ? ReportStatus.PROCESSED
+                : ReportStatus.PENDING;
+    }
 }

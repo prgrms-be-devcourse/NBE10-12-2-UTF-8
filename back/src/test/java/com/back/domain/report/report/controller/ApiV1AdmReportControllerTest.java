@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -231,4 +232,139 @@ public class ApiV1AdmReportControllerTest {
                 .andExpect(jsonPath("$.data.reportedMessages[2].senderLabel").value("피신고자"))
                 .andExpect(jsonPath("$.data.reportedMessages[2].isTarget").value(true));
     }
+
+    @Test
+    @DisplayName("관리자용 신고서 처리 상태 수정 토글 성공 (PENDING -> PROCESSED)")
+    void t4() throws Exception {
+        // Given - 관리자 로그인
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "admin@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        // Given - 임시 신고 데이터 생성 (기본 PENDING)
+        Member reporter = memberService.join("reporter_toggle@test.com", "1234", Industry.IT, "USER");
+        Member reported = memberService.join("reported_toggle@test.com", "1234", Industry.IT, "USER");
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        Report report = reportRepository.save(new Report(reporter, reported, chatRoom, UUID.randomUUID(), "욕설"));
+
+        // When - PATCH 처리 상태 토글 요청
+        ResultActions resultActions = mvc
+                .perform(
+                        patch("/api/v1/admin/reports/" + report.getId() + "/status")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        // Then - 토글 결과 검증 (PENDING -> PROCESSED)
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("신고서 처리 상태 수정 성공"))
+                .andExpect(jsonPath("$.data.reportId").value(report.getId().toString()))
+                .andExpect(jsonPath("$.data.status").value("PROCESSED"));
+    }
+
+    @Test
+    @DisplayName("일반 회원 권한으로 관리자용 신고 처리 상태 수정 API 접근 시 403 Forbidden 차단")
+    void t5() throws Exception {
+        // Given - 일반 회원 가입 및 로그인
+        Member user = memberService.join("normal_toggle_user@test.com", "1234", Industry.IT, "USER");
+
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "normal_toggle_user@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        // Given - 임시 신고 데이터 생성
+        Member reporter = memberService.join("reporter_toggle_fail@test.com", "1234", Industry.IT, "USER");
+        Member reported = memberService.join("reported_toggle_fail@test.com", "1234", Industry.IT, "USER");
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        Report report = reportRepository.save(new Report(reporter, reported, chatRoom, UUID.randomUUID(), "욕설"));
+
+        // When - 일반 유저가 어드민 토글 API 호출
+        ResultActions resultActions = mvc
+                .perform(
+                        patch("/api/v1/admin/reports/" + report.getId() + "/status")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        // Then - 403 Forbidden 차단 검증
+        resultActions.andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 신고 ID로 처리 상태 수정 요청 시 404-1 에러 반환")
+    void t6() throws Exception {
+        // Given - 관리자 로그인
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "admin@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        // Given - 임의의 존재하지 않는 신고 ID 생성
+        UUID nonExistentId = UUID.randomUUID();
+
+        // When - PATCH 처리 상태 토글 요청
+        ResultActions resultActions = mvc
+                .perform(
+                        patch("/api/v1/admin/reports/" + nonExistentId + "/status")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        // Then - 404 Not Found 및 404-1 에러 검증
+        resultActions
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.resultCode").value("404-1"))
+                .andExpect(jsonPath("$.msg").value("존재하지 않는 신고서입니다."));
+    }
 }
+
+
