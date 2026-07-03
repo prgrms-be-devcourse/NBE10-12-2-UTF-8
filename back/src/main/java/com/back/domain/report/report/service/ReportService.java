@@ -14,6 +14,8 @@ import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -73,5 +75,10 @@ public class ReportService {
 
         log.info("[ReportService] 신고 접수 완료 - Thread: {}", Thread.currentThread().getName());
         return report;
+    }
+
+    // 관리자용 신고 목록 페이징 조회
+    public Page<Report> getReportsForAdmin(Pageable pageable) {
+        return reportRepository.findAllWithMember(pageable);
     }
 }
