@@ -57,7 +57,7 @@ export default function SignupPage() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#fff', fontFamily: "Arial, 'Helvetica Neue', sans-serif", padding: '34px 0 30px', overflowY: 'auto' }}>
-      <TangbisilLogo size={34} />
+      <Link href="/" style={{ textDecoration: 'none' }}><TangbisilLogo size={34} /></Link>
       <div style={{ fontSize: 20, color: '#202124', fontWeight: 500, marginBottom: 4, marginTop: 6 }}>계정 만들기</div>
       <div style={{ fontSize: 13, color: '#5f6368', marginBottom: 24 }}>실명·회사명·연락처는 받지 않아요. 익명으로 시작합니다</div>
 

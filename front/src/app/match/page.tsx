@@ -6,8 +6,9 @@ import { apiGetMatch, apiCancelMatch, apiGetMe, getToken, INDUSTRY_NAMES } from 
 import { AppShell } from '@/components/AppShell';
 import { TangbisilLogo } from '@/components/TangbisilLogo';
 
-const MATCH_KEY      = 'tangbisil_match';
-const SITUATION_KEY  = 'tangbisil_situation';
+const MATCH_KEY     = 'tangbisil_match';
+const SITUATION_KEY = 'tangbisil_situation';
+const TIMEOUT_KEY   = 'tangbisil_match_timeout';
 
 function SearchIcon() {
   return (
@@ -94,7 +95,15 @@ export default function MatchPage() {
           localStorage.removeItem(MATCH_KEY);
           router.push(`/chat/${data.chatRoomId}`);
         }
-      } catch { /* ignore */ }
+      } catch (err) {
+        if ((err as { status?: number })?.status === 404) {
+          clearInterval(matchPollRef.current!);    matchPollRef.current    = null;
+          clearInterval(elapsedTimerRef.current!); elapsedTimerRef.current = null;
+          localStorage.removeItem(MATCH_KEY);
+          localStorage.setItem(TIMEOUT_KEY, '1');
+          router.push('/');
+        }
+      }
     }, 2000);
 
     return () => {
