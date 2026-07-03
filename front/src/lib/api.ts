@@ -80,12 +80,21 @@ async function req<T>(path: string, options?: RequestInit): Promise<T> {
     },
   });
   if (res.status === 204) return null as T;
-  const body = await res.json();
+  const text = await res.text();
+  const body = text ? safeJsonParse(text) : null;
   if (!res.ok)
-    throw Object.assign(new Error(body?.msg ?? res.statusText), {
+    throw Object.assign(new Error(body?.msg ?? text ?? res.statusText), {
       status: res.status,
     });
   return body.data as T;
+}
+
+function safeJsonParse(text: string) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }
 
 /* ── Auth ───────────────────────────────────────────────────────── */
