@@ -26,6 +26,8 @@ public class Member extends BaseEntity {
     @Column(unique = true)
     private UUID refreshToken;
     private LocalDateTime refreshTokenExpiresAt;
+    private AuthProvider provider;
+    private String providerId;
 
     public Member(UUID id, String email, String role) {
         setId(id);
