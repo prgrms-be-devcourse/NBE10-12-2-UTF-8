@@ -365,6 +365,91 @@ public class ApiV1AdmReportControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("404-1"))
                 .andExpect(jsonPath("$.msg").value("존재하지 않는 신고서입니다."));
     }
+
+    @Test
+    @DisplayName("관리자용 신고 목록 PENDING 필터링 조회 성공")
+    void t7() throws Exception {
+        // Given - 관리자 로그인
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "admin@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        // When - status=PENDING 필터 얹어서 목록 조회 요청
+        ResultActions resultActions = mvc
+                .perform(
+                        get("/api/v1/admin/reports")
+                                .param("status", "PENDING")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        // Then - 오직 PENDING 상태인 신고만 내려오는지 검증
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("신고 목록 조회 성공"))
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content[*].status", org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("PENDING"))));
+    }
+
+    @Test
+    @DisplayName("관리자용 신고 목록 PROCESSED 필터링 조회 성공")
+    void t8() throws Exception {
+        // Given - 관리자 로그인
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "admin@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        // When - status=PROCESSED 필터 얹어서 목록 조회 요청
+        ResultActions resultActions = mvc
+                .perform(
+                        get("/api/v1/admin/reports")
+                                .param("status", "PROCESSED")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        // Then - 오직 PROCESSED 상태인 신고만 내려오는지 검증
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("신고 목록 조회 성공"))
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content[*].status", org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("PROCESSED"))));
+    }
 }
+
 
 
