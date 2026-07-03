@@ -25,6 +25,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class MatchRequestService {
     private final MatchRequestRepository matchRequestRepository;
     private final ChatRoomService chatRoomService;
@@ -66,6 +67,7 @@ public class MatchRequestService {
         return matchRequest;
     }
 
+    @Transactional
     public void tryMatch(MatchRequest matchRequest) {
         if(matchRequest.getStatus() == MatchStatus.MATCHED) {
             return;
