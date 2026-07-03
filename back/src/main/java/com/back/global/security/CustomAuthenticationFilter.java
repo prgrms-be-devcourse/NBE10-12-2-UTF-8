@@ -86,8 +86,8 @@ public class CustomAuthenticationFilter extends OncePerRequestFilter {
         Member dbMember = memberService.findById(id)
                 .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
 
-        if (dbMember.isSuspended()) {
-            throw new ServiceException("403-1", "접근 권한이 없습니다.");
+        if (dbMember.isSuspended() && !isAllowedForSuspended(request)) {
+            throw new ServiceException("403-1", "정지된 계정입니다. 내 정보 조회와 로그아웃만 가능합니다.");
         }
 
         Member member = new Member(id, email, role);
@@ -109,5 +109,20 @@ public class CustomAuthenticationFilter extends OncePerRequestFilter {
                 .setAuthentication(authentication);
 
         filterChain.doFilter(request, response);
+    }
+
+    // 정지된 회원이 예외적으로 접근 가능한 경로/메서드 화이트리스트.
+    // "내 정보 조회"와 로그아웃만 허용하고, 산업군 수정/탈퇴를 포함한 나머지는 전부 차단한다.
+    private boolean isAllowedForSuspended(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
+
+        if (uri.equals("/api/v1/members/logout") && method.equals("POST")) {
+            return true;
+        }
+        if (uri.equals("/api/v1/members/me") && method.equals("GET")) {
+            return true;
+        }
+        return false;
     }
 }

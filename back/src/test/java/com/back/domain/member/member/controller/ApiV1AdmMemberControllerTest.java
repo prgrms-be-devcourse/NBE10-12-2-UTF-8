@@ -262,7 +262,7 @@ public class ApiV1AdmMemberControllerTest {
     }
 
     @Test
-    @DisplayName("정지 처리된 유저가 API(/me) 요청 시 JWT Security 필터 단에서 즉시 403 차단")
+    @DisplayName("정지된 회원도 /me 조회는 가능하다")
     void t6() throws Exception {
         // Given - 일반 회원 가입 및 로그인 후, 정지 상태로 변경
         Member user = memberService.join("user_blocked_adm@test.com", "1234", com.back.domain.member.member.entity.Industry.IT, "USER");
@@ -299,7 +299,171 @@ public class ApiV1AdmMemberControllerTest {
                 )
                 .andDo(print());
 
-        // Then
-        resultActions.andExpect(status().isForbidden());
+        // Then - 정지 상태여도 내 정보 조회는 허용된다
+        resultActions.andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("정지된 회원도 로그아웃은 가능하다")
+    void t7() throws Exception {
+        Member user = memberService.join("user_susp_logout@test.com", "1234", com.back.domain.member.member.entity.Industry.IT, "USER");
+
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "user_susp_logout@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        user.toggleSuspended();
+        memberRepository.saveAndFlush(user);
+
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/members/logout")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        resultActions.andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("정지된 회원은 산업군 수정이 차단된다")
+    void t8() throws Exception {
+        Member user = memberService.join("user_susp_patch@test.com", "1234", com.back.domain.member.member.entity.Industry.IT, "USER");
+
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "user_susp_patch@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        user.toggleSuspended();
+        memberRepository.saveAndFlush(user);
+
+        ResultActions resultActions = mvc
+                .perform(
+                        patch("/api/v1/members/me")
+                                .header("Authorization", "Bearer " + accessToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                        "industry": "금융업"
+                                    }
+                                    """)
+                )
+                .andDo(print());
+
+        resultActions
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.resultCode").value("403-1"));
+    }
+
+    @Test
+    @DisplayName("정지된 회원은 탈퇴가 차단된다")
+    void t9() throws Exception {
+        Member user = memberService.join("user_susp_delete@test.com", "1234", com.back.domain.member.member.entity.Industry.IT, "USER");
+
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "user_susp_delete@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        user.toggleSuspended();
+        memberRepository.saveAndFlush(user);
+
+        ResultActions resultActions = mvc
+                .perform(
+                        delete("/api/v1/members/me")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        resultActions
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.resultCode").value("403-1"));
+    }
+
+    @Test
+    @DisplayName("정지된 회원은 내 정보 조회/로그아웃 외 API는 여전히 403 차단된다 (매칭 이력 예시)")
+    void t10() throws Exception {
+        Member user = memberService.join("user_susp_blocked_other@test.com", "1234", com.back.domain.member.member.entity.Industry.IT, "USER");
+
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "user_susp_blocked_other@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        user.toggleSuspended();
+        memberRepository.saveAndFlush(user);
+
+        ResultActions resultActions = mvc
+                .perform(
+                        get("/api/v1/members/me/matches")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        resultActions
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.resultCode").value("403-1"));
     }
 }
