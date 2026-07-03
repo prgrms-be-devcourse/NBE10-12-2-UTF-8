@@ -10,7 +10,8 @@ public record MemberAdmDto(
         String email,
         Industry industry,
         boolean isSuspended,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        String role
 ) {
     public MemberAdmDto(Member member) {
         this(
@@ -18,7 +19,8 @@ public record MemberAdmDto(
                 member.getEmail(),
                 member.getIndustry(),
                 member.isSuspended(),
-                member.getCreatedAt()
+                member.getCreatedAt(),
+                member.getRole()
         );
     }
 }
