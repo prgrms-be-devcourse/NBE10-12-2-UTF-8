@@ -7,9 +7,9 @@ import AdminHeader from '@/components/AdminHeader';
 
 const PAGE_SIZE = 10;
 
-const STATUS_LABEL: Record<string, string> = { PENDING: '검토 중', PROCESSED: '처리 완료' };
+const STATUS_LABEL: Record<string, string> = { PENDING: '처리 전', PROCESSED: '처리 완료' };
 const STATUS_STYLE: Record<string, { background: string; color: string }> = {
-  PENDING:   { background: '#fef7e0', color: '#b06000' },
+  PENDING:   { background: '#fce8e6', color: '#c5221f' },
   PROCESSED: { background: '#e6f4ea', color: '#137333' },
 };
 
@@ -19,12 +19,12 @@ function fmtDate(iso: string) {
 
 export default function AdminReportsPage() {
   const router = useRouter();
-  const [reports, setReports] = useState<AdminReport[]>([]);
-  const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  const [reports, setReports]             = useState<AdminReport[]>([]);
+  const [page, setPage]                   = useState(0);
+  const [totalPages, setTotalPages]       = useState(1);
   const [totalElements, setTotalElements] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState('');
 
   useEffect(() => {
     if (!isAdmin()) { router.replace('/login'); return; }
@@ -40,6 +40,36 @@ export default function AdminReportsPage() {
       .finally(() => setLoading(false));
   }, [page, router]);
 
+  const pendingReports   = reports.filter(r => r.status === 'PENDING');
+  const processedReports = reports.filter(r => r.status === 'PROCESSED');
+
+  const renderRow = (r: AdminReport) => (
+    <div
+      key={r.reportId}
+      onClick={() => router.push(`/admin/reports/${r.reportId}`)}
+      style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.4fr 2fr 0.9fr 0.9fr', alignItems: 'center', padding: '13px 18px', borderTop: '1px solid #f3f3f3', fontSize: 13, color: '#202124', cursor: 'pointer' }}
+      onMouseEnter={e => (e.currentTarget.style.background = '#f8f9fa')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+    >
+      <span style={{ fontSize: 12, color: '#5f6368', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.reporterEmail}</span>
+      <span style={{ fontSize: 12, color: '#5f6368', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.reportedEmail}</span>
+      <span style={{ fontSize: 12, color: '#3c4043', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.reason}</span>
+      <span>
+        <span style={{ display: 'inline-block', padding: '3px 8px', borderRadius: 9, fontSize: 11, fontWeight: 600, ...(STATUS_STYLE[r.status] ?? {}) }}>
+          {STATUS_LABEL[r.status] ?? r.status}
+        </span>
+      </span>
+      <span style={{ textAlign: 'right', fontSize: 11.5, color: '#9aa0a6' }}>{fmtDate(r.createdAt)}</span>
+    </div>
+  );
+
+  const sectionHeader = (label: string, count: number, color: string, bg: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 18px', background: bg, borderTop: '1px solid #ebebeb' }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: 0.3 }}>{label}</span>
+      <span style={{ fontSize: 11, color, opacity: 0.7 }}>({count}건)</span>
+    </div>
+  );
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f8f9fa', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
       <AdminHeader active="reports" />
@@ -50,7 +80,7 @@ export default function AdminReportsPage() {
         </div>
 
         <div style={{ border: '1px solid #ebebeb', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.4fr 2fr 0.8fr 0.8fr', padding: '12px 18px', background: '#f8f9fa', fontSize: 12, color: '#5f6368', fontWeight: 600 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.4fr 2fr 0.9fr 0.9fr', padding: '12px 18px', background: '#f8f9fa', fontSize: 12, color: '#5f6368', fontWeight: 600 }}>
             <span>신고자</span><span>피신고자</span><span>사유</span><span>상태</span><span style={{ textAlign: 'right' }}>일시</span>
           </div>
 
@@ -60,25 +90,16 @@ export default function AdminReportsPage() {
             <div style={{ padding: '30px 18px', textAlign: 'center', fontSize: 13, color: '#ea4c4c' }}>{error}</div>
           ) : reports.length === 0 ? (
             <div style={{ padding: '30px 18px', textAlign: 'center', fontSize: 13, color: '#9aa0a6' }}>신고 내역 없음</div>
-          ) : reports.map(r => (
-            <div
-              key={r.reportId}
-              onClick={() => router.push(`/admin/reports/${r.reportId}`)}
-              style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.4fr 2fr 0.8fr 0.8fr', alignItems: 'center', padding: '13px 18px', borderTop: '1px solid #f3f3f3', fontSize: 13, color: '#202124', cursor: 'pointer' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#f8f9fa')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >
-              <span style={{ fontSize: 12, color: '#5f6368', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.reporterEmail}</span>
-              <span style={{ fontSize: 12, color: '#5f6368', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.reportedEmail}</span>
-              <span style={{ fontSize: 12, color: '#3c4043', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.reason}</span>
-              <span>
-                <span style={{ display: 'inline-block', padding: '3px 8px', borderRadius: 9, fontSize: 11, fontWeight: 600, ...(STATUS_STYLE[r.status] ?? {}) }}>
-                  {STATUS_LABEL[r.status] ?? r.status}
-                </span>
-              </span>
-              <span style={{ textAlign: 'right', fontSize: 11.5, color: '#9aa0a6' }}>{fmtDate(r.createdAt)}</span>
-            </div>
-          ))}
+          ) : (
+            <>
+              {pendingReports.length > 0 && (
+                <>{sectionHeader('처리 전', pendingReports.length, '#c5221f', '#fff8f7')}{pendingReports.map(renderRow)}</>
+              )}
+              {processedReports.length > 0 && (
+                <>{sectionHeader('처리 완료', processedReports.length, '#137333', '#f6fdf7')}{processedReports.map(renderRow)}</>
+              )}
+            </>
+          )}
         </div>
 
         {totalPages > 1 && (

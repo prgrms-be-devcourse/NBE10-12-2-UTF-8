@@ -279,3 +279,6 @@ export const apiGetAdminReports = (page = 0, size = 10) =>
 
 export const apiGetAdminReport = (reportId: string) =>
   req<AdminReportDetail>(`/api/v1/admin/reports/${reportId}`);
+
+export const apiToggleReportStatus = (reportId: string) =>
+  req<{ reportId: string; status: 'PENDING' | 'PROCESSED' }>(`/api/v1/admin/reports/${reportId}/status`, { method: 'PATCH' });

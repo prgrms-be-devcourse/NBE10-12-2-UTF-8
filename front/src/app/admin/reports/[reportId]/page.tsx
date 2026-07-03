@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { apiGetAdminReport, isAdmin, type AdminReportDetail } from '@/lib/api';
+import { apiGetAdminReport, apiToggleReportStatus, isAdmin, type AdminReportDetail } from '@/lib/api';
 import AdminHeader from '@/components/AdminHeader';
 
-const STATUS_LABEL: Record<string, string> = { PENDING: '검토 중', PROCESSED: '처리 완료' };
+const STATUS_LABEL: Record<string, string> = { PENDING: '처리 전', PROCESSED: '처리 완료' };
 const STATUS_STYLE: Record<string, { background: string; color: string }> = {
-  PENDING:   { background: '#fef7e0', color: '#b06000' },
+  PENDING:   { background: '#fce8e6', color: '#c5221f' },
   PROCESSED: { background: '#e6f4ea', color: '#137333' },
 };
 
@@ -24,9 +24,10 @@ function fmtTime(iso: string) {
 export default function AdminReportDetailPage() {
   const router = useRouter();
   const { reportId } = useParams<{ reportId: string }>();
-  const [detail, setDetail] = useState<AdminReportDetail | null>(null);
+  const [detail, setDetail]   = useState<AdminReportDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError]     = useState('');
+  const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
     if (!isAdmin()) { router.replace('/login'); return; }
@@ -36,6 +37,20 @@ export default function AdminReportDetailPage() {
       .catch(() => setError('신고 내역을 불러오지 못했어요'))
       .finally(() => setLoading(false));
   }, [reportId, router]);
+
+  const handleToggle = async () => {
+    if (!detail || toggling) return;
+    setToggling(true);
+    const prev = detail.status;
+    setDetail(d => d ? { ...d, status: d.status === 'PENDING' ? 'PROCESSED' : 'PENDING' } : d);
+    try {
+      await apiToggleReportStatus(reportId);
+    } catch {
+      setDetail(d => d ? { ...d, status: prev } : d);
+    } finally {
+      setToggling(false);
+    }
+  };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f8f9fa', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
@@ -54,9 +69,23 @@ export default function AdminReportDetailPage() {
             <div style={{ background: '#fff', border: '1px solid #ebebeb', borderRadius: 12, padding: '20px 22px', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: '#202124' }}>신고 정보</span>
-                <span style={{ display: 'inline-block', padding: '4px 10px', borderRadius: 9, fontSize: 12, fontWeight: 600, ...(STATUS_STYLE[detail.status] ?? {}) }}>
-                  {STATUS_LABEL[detail.status] ?? detail.status}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ display: 'inline-block', padding: '4px 10px', borderRadius: 9, fontSize: 12, fontWeight: 600, ...(STATUS_STYLE[detail.status] ?? {}) }}>
+                    {STATUS_LABEL[detail.status] ?? detail.status}
+                  </span>
+                  <button
+                    onClick={handleToggle}
+                    disabled={toggling}
+                    style={{
+                      padding: '5px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none',
+                      cursor: toggling ? 'default' : 'pointer', opacity: toggling ? 0.6 : 1,
+                      background: detail.status === 'PENDING' ? '#e6f4ea' : '#fce8e6',
+                      color: detail.status === 'PENDING' ? '#137333' : '#c5221f',
+                    }}
+                  >
+                    {detail.status === 'PENDING' ? '처리 완료로 변경' : '처리 전으로 변경'}
+                  </button>
+                </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px', fontSize: 13 }}>
                 <div><span style={{ color: '#9aa0a6' }}>신고자 </span><span style={{ color: '#202124' }}>{detail.reporterEmail}</span></div>
