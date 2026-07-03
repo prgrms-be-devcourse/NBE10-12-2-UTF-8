@@ -5,10 +5,10 @@ import { useRouter, useParams } from 'next/navigation';
 import { apiGetAdminReport, isAdmin, type AdminReportDetail } from '@/lib/api';
 import AdminHeader from '@/components/AdminHeader';
 
-const STATUS_LABEL: Record<string, string> = { PENDING: '검토 중', RESOLVED: '처리 완료' };
+const STATUS_LABEL: Record<string, string> = { PENDING: '검토 중', PROCESSED: '처리 완료' };
 const STATUS_STYLE: Record<string, { background: string; color: string }> = {
-  PENDING:  { background: '#fef7e0', color: '#b06000' },
-  RESOLVED: { background: '#e6f4ea', color: '#137333' },
+  PENDING:   { background: '#fef7e0', color: '#b06000' },
+  PROCESSED: { background: '#e6f4ea', color: '#137333' },
 };
 
 const LABEL_STYLE: Record<string, { background: string; color: string }> = {
@@ -61,7 +61,6 @@ export default function AdminReportDetailPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px', fontSize: 13 }}>
                 <div><span style={{ color: '#9aa0a6' }}>신고자 </span><span style={{ color: '#202124' }}>{detail.reporterEmail}</span></div>
                 <div><span style={{ color: '#9aa0a6' }}>피신고자 </span><span style={{ color: '#202124' }}>{detail.reportedEmail}</span></div>
-                <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#9aa0a6' }}>사유 </span><span style={{ color: '#202124' }}>{detail.reason}</span></div>
               </div>
             </div>
 

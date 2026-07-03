@@ -7,10 +7,10 @@ import AdminHeader from '@/components/AdminHeader';
 
 const PAGE_SIZE = 10;
 
-const STATUS_LABEL: Record<string, string> = { PENDING: '검토 중', RESOLVED: '처리 완료' };
+const STATUS_LABEL: Record<string, string> = { PENDING: '검토 중', PROCESSED: '처리 완료' };
 const STATUS_STYLE: Record<string, { background: string; color: string }> = {
-  PENDING:  { background: '#fef7e0', color: '#b06000' },
-  RESOLVED: { background: '#e6f4ea', color: '#137333' },
+  PENDING:   { background: '#fef7e0', color: '#b06000' },
+  PROCESSED: { background: '#e6f4ea', color: '#137333' },
 };
 
 function fmtDate(iso: string) {
@@ -33,8 +33,8 @@ export default function AdminReportsPage() {
     apiGetAdminReports(page, PAGE_SIZE)
       .then(data => {
         setReports(data.content);
-        setTotalPages(data.pageable.totalPages);
-        setTotalElements(data.pageable.totalElements);
+        setTotalPages(data.totalPages);
+        setTotalElements(data.totalElements);
       })
       .catch(() => setError('데이터를 불러오지 못했어요'))
       .finally(() => setLoading(false));

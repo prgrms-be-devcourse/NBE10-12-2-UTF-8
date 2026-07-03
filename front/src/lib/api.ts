@@ -236,7 +236,7 @@ export const apiSuspendMember = (memberId: string) =>
 /* ── Reports ────────────────────────────────────────────────────── */
 export type ReportResult = {
   reportId: string;
-  status: 'PENDING' | 'RESOLVED';
+  status: 'PENDING' | 'PROCESSED';
   createdAt: string;
 };
 
@@ -251,11 +251,15 @@ export type AdminReport = {
   reporterEmail: string;
   reportedEmail: string;
   reason: string;
-  status: 'PENDING' | 'RESOLVED';
+  status: 'PENDING' | 'PROCESSED';
   createdAt: string;
 };
 
-export type AdminReportDetail = AdminReport & {
+export type AdminReportDetail = {
+  reportId: string;
+  reporterEmail: string;
+  reportedEmail: string;
+  status: 'PENDING' | 'PROCESSED';
   reportedMessages: Array<{
     senderNickname: string;
     senderLabel: string;
@@ -268,7 +272,9 @@ export type AdminReportDetail = AdminReport & {
 export const apiGetAdminReports = (page = 0, size = 10) =>
   req<{
     content: AdminReport[];
-    pageable: { pageNumber: number; pageSize: number; totalElements: number; totalPages: number };
+    totalPages: number;
+    totalElements: number;
+    pageable: { pageNumber: number; pageSize: number };
   }>(`/api/v1/admin/reports?page=${page}&size=${size}`);
 
 export const apiGetAdminReport = (reportId: string) =>

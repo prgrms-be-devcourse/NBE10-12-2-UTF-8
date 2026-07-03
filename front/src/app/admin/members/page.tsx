@@ -9,18 +9,18 @@ const PAGE_SIZE = 10;
 
 export default function AdminMembersPage() {
   const router = useRouter();
-  const [members, setMembers]           = useState<AdminMember[]>([]);
-  const [page, setPage]                 = useState(0);
-  const [totalPages, setTotalPages]     = useState(1);
+  const [members, setMembers]             = useState<AdminMember[]>([]);
+  const [page, setPage]                   = useState(0);
+  const [totalPages, setTotalPages]       = useState(1);
   const [totalElements, setTotalElements] = useState(0);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState('');
-  const [suspending, setSuspending]     = useState<string | null>(null);
-  const [suspendError, setSuspendError] = useState('');
-  const [searchInput, setSearchInput]   = useState('');
-  const [searchResult, setSearchResult] = useState<AdminMember[] | null>(null);
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState('');
+  const [suspending, setSuspending]       = useState<string | null>(null);
+  const [suspendError, setSuspendError]   = useState('');
+  const [searchInput, setSearchInput]     = useState('');
+  const [searchResult, setSearchResult]   = useState<AdminMember[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError]   = useState('');
+  const [searchError, setSearchError]     = useState('');
 
   useEffect(() => {
     if (!isAdmin()) { router.replace('/login'); return; }
@@ -132,16 +132,15 @@ export default function AdminMembersPage() {
   );
 
   const displayList = searchResult ?? members;
-  const adminMembers    = displayList.filter(m => m.role === 'ADMIN');
+  const adminMembers     = displayList.filter(m => m.role === 'ADMIN');
   const suspendedMembers = displayList.filter(m => m.isSuspended && m.role !== 'ADMIN');
-  const activeMembers   = displayList.filter(m => !m.isSuspended && m.role !== 'ADMIN');
+  const activeMembers    = displayList.filter(m => !m.isSuspended && m.role !== 'ADMIN');
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#fff', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
       <AdminHeader active="members" />
 
       <div style={{ flex: 1, padding: '24px 26px', overflowY: 'auto' }}>
-        {/* Filters */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
           <div style={{ flex: 1, height: 40, maxWidth: 340, border: `1px solid ${searchResult !== null ? '#3b7ff2' : '#dadce0'}`, borderRadius: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, cursor: 'pointer' }} onClick={handleSearch}>
@@ -169,7 +168,6 @@ export default function AdminMembersPage() {
           </div>
         )}
 
-        {/* Table */}
         <div style={{ border: '1px solid #ebebeb', borderRadius: 12, overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.5fr 1fr 1fr 0.9fr 0.7fr', padding: '12px 18px', background: '#f8f9fa', fontSize: 12, color: '#5f6368', fontWeight: 600 }}>
             <span>UUID</span><span>이메일</span><span>산업군</span><span>가입일</span><span>상태</span><span style={{ textAlign: 'right' }}>제재</span>
@@ -197,35 +195,25 @@ export default function AdminMembersPage() {
           )}
         </div>
 
-        {/* 검색 결과 표시 중엔 페이지네이션 숨김 */}
         {searchResult === null && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
             <span style={{ fontSize: 12, color: '#9aa0a6' }}>
               {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalElements)} / {totalElements.toLocaleString('ko-KR')}
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button
-                onClick={() => setPage(p => Math.max(0, p - 1))}
-                disabled={page === 0}
-                style={{ width: 30, height: 30, border: '1px solid #dadce0', borderRadius: 7, background: 'none', cursor: page === 0 ? 'default' : 'pointer', fontSize: 13, color: page === 0 ? '#dadce0' : '#9aa0a6' }}
-              >‹</button>
+              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
+                style={{ width: 30, height: 30, border: '1px solid #dadce0', borderRadius: 7, background: 'none', cursor: page === 0 ? 'default' : 'pointer', fontSize: 13, color: page === 0 ? '#dadce0' : '#9aa0a6' }}>‹</button>
               {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                 const p = Math.max(0, Math.min(page - 2, totalPages - 5)) + i;
                 return (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    style={{ width: 30, height: 30, border: p === page ? 'none' : '1px solid #dadce0', background: p === page ? '#3b7ff2' : 'none', color: p === page ? '#fff' : '#3c4043', borderRadius: 7, cursor: 'pointer', fontSize: 13, fontWeight: p === page ? 600 : 400 }}
-                  >
+                  <button key={p} onClick={() => setPage(p)}
+                    style={{ width: 30, height: 30, border: p === page ? 'none' : '1px solid #dadce0', background: p === page ? '#3b7ff2' : 'none', color: p === page ? '#fff' : '#3c4043', borderRadius: 7, cursor: 'pointer', fontSize: 13, fontWeight: p === page ? 600 : 400 }}>
                     {p + 1}
                   </button>
                 );
               })}
-              <button
-                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-                style={{ width: 30, height: 30, border: '1px solid #dadce0', borderRadius: 7, background: 'none', cursor: page >= totalPages - 1 ? 'default' : 'pointer', fontSize: 13, color: page >= totalPages - 1 ? '#dadce0' : '#9aa0a6' }}
-              >›</button>
+              <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
+                style={{ width: 30, height: 30, border: '1px solid #dadce0', borderRadius: 7, background: 'none', cursor: page >= totalPages - 1 ? 'default' : 'pointer', fontSize: 13, color: page >= totalPages - 1 ? '#dadce0' : '#9aa0a6' }}>›</button>
             </div>
           </div>
         )}
