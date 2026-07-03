@@ -365,6 +365,107 @@ public class ApiV1AdmReportControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("404-1"))
                 .andExpect(jsonPath("$.msg").value("존재하지 않는 신고서입니다."));
     }
+
+    @Test
+    @DisplayName("관리자용 신고 목록 PENDING 필터링 조회 성공")
+    void t7() throws Exception {
+        // Given - 관리자 로그인
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "admin@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        // Given - PENDING 상태인 검증용 데이터 직접 생성
+        Member reporter = memberService.join("reporter_t7@test.com", "1234", Industry.IT, "USER");
+        Member reported = memberService.join("reported_t7@test.com", "1234", Industry.IT, "USER");
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        reportRepository.save(new Report(reporter, reported, chatRoom, UUID.randomUUID(), "PENDING 검증용 사유"));
+
+        // When - status=PENDING 필터 얹어서 목록 조회 요청
+        ResultActions resultActions = mvc
+                .perform(
+                        get("/api/v1/admin/reports")
+                                .param("status", "PENDING")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        // Then - 오직 PENDING 상태인 신고만 내려오는지 검증 (공허한 참 방지를 위해 isNotEmpty도 같이 검증)
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("신고 목록 조회 성공"))
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content").isNotEmpty())
+                .andExpect(jsonPath("$.data.content[*].status", org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("PENDING"))));
+    }
+
+    @Test
+    @DisplayName("관리자용 신고 목록 PROCESSED 필터링 조회 성공")
+    void t8() throws Exception {
+        // Given - 관리자 로그인
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                         "email": "admin@test.com",
+                                         "password": "1234"
+                                    }
+                                    """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        // Given - PROCESSED 상태인 검증용 데이터 직접 생성
+        Member reporter = memberService.join("reporter_t8@test.com", "1234", Industry.IT, "USER");
+        Member reported = memberService.join("reported_t8@test.com", "1234", Industry.IT, "USER");
+        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(ChatRoomStatus.ACTIVE, 2));
+        Report report = new Report(reporter, reported, chatRoom, UUID.randomUUID(), "PROCESSED 검증용 사유");
+        report.toggleStatus();
+        reportRepository.save(report);
+
+        // When - status=PROCESSED 필터 얹어서 목록 조회 요청
+        ResultActions resultActions = mvc
+                .perform(
+                        get("/api/v1/admin/reports")
+                                .param("status", "PROCESSED")
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        // Then - 오직 PROCESSED 상태인 신고만 내려오는지 검증 (공허한 참 방지를 위해 isNotEmpty도 같이 검증)
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("신고 목록 조회 성공"))
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content").isNotEmpty()) 
+                .andExpect(jsonPath("$.data.content[*].status", org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("PROCESSED"))));
+    }
 }
+
 
 
