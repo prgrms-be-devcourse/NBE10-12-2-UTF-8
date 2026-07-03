@@ -3,6 +3,8 @@ package com.back.domain.report.report.controller;
 import com.back.domain.report.report.dto.ReportAdmDetailDto;
 import com.back.domain.report.report.dto.ReportAdmDto;
 import com.back.domain.report.report.dto.ReportStatusUpdateDto;
+import com.back.domain.report.report.entity.Report;
+import com.back.domain.report.report.entity.ReportStatus;
 import com.back.domain.report.report.service.ReportService;
 import com.back.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -27,18 +30,19 @@ public class ApiV1AdmReportController {
 
     @GetMapping
     @Operation(summary = "신고 목록 조회")
-    public RsData<Page<ReportAdmDto>> getItems(
+    public RsData<Page<ReportAdmDto>> getList(
+            @RequestParam(required = false) ReportStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<ReportAdmDto> reports = reportService.getReportsForAdmin(pageable)
-                .map(ReportAdmDto::new);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
+        Page<Report> reports = reportService.findAllWithMember(status, pageable);
+        Page<ReportAdmDto> reportDtos = reports.map(ReportAdmDto::new);
         return new RsData<>(
                 "200-1",
                 "신고 목록 조회 성공",
-                reports
+                reportDtos
         );
     }
 
