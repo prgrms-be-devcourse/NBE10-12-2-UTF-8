@@ -44,9 +44,9 @@ public class ApiV1AdmMemberController {
         );
     }
     @GetMapping("/{memberId}")
-    @Operation(summary = "회원 단건 조회")
-    public RsData<MemberAdmDto> getItem(@PathVariable UUID memberId) {
-        Member member = memberService.findById(memberId)
+    @Operation(summary = "회원 단건 조회 (UUID 또는 이메일)")
+    public RsData<MemberAdmDto> getItem(@PathVariable String memberId) {
+        Member member = memberService.findByIdentifier(memberId)
                 .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
 
         return new RsData<>(
