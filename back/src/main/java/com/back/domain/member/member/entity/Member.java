@@ -43,6 +43,7 @@ public class Member extends BaseEntity {
         this.industry = industry;
         this.role = role;
         this.isSuspended = false;
+        this.provider = AuthProvider.LOCAL;
     }
 
     public static Member ofOAuth(String email, AuthProvider provider, String providerId){
