@@ -138,6 +138,48 @@ public class ApiV1AdmMemberControllerTest {
     }
 
     @Test
+    @DisplayName("관리자 회원 단건 조회 - 이메일로 조회")
+    void t2_1() throws Exception {
+        // Given - 관리자 로그인
+        String loginResponse = mvc.perform(
+                        post("/api/v1/members/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                {
+                                     "email": "admin@test.com",
+                                     "password": "1234"
+                                }
+                                """)
+                )
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String accessToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(loginResponse)
+                .path("data")
+                .path("accessToken")
+                .asText();
+
+        Member target = memberService.join("lookup_by_email@test.com", "1234", com.back.domain.member.member.entity.Industry.IT, "USER");
+
+        // When - UUID 대신 이메일로 조회
+        ResultActions resultActions = mvc
+                .perform(
+                        get("/api/v1/admin/members/" + target.getEmail())
+                                .header("Authorization", "Bearer " + accessToken)
+                )
+                .andDo(print());
+
+        // Then
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.data.memberId").value(target.getId().toString()))
+                .andExpect(jsonPath("$.data.email").value("lookup_by_email@test.com"));
+    }
+
+    @Test
     @DisplayName("관리자 권한으로 일반 회원 정지 토글 성공")
     void t3() throws Exception {
         // Given - 관리자 로그인

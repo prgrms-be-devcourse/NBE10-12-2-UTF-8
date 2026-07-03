@@ -86,6 +86,15 @@ public class MemberService {
         return memberRepository.findById(id);
     }
 
+    public Optional<Member> findByIdentifier(String identifier) {
+        try {
+            UUID id = UUID.fromString(identifier);
+            return findById(id);
+        } catch (IllegalArgumentException e) {
+            return findByEmail(identifier);
+        }
+    }
+
     @Transactional
     public void clearRefreshToken(Member member) {
         Member findMember = memberRepository.findById(member.getId())
