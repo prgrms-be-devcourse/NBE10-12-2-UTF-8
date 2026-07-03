@@ -10,6 +10,7 @@ import com.back.domain.member.member.entity.Member;
 import com.back.domain.report.report.dto.ReportAdmDetailDto;
 import com.back.domain.report.report.dto.ReportStatusUpdateDto;
 import com.back.domain.report.report.entity.Report;
+import com.back.domain.report.report.entity.ReportStatus;
 import com.back.domain.report.report.entity.ReportedMessage;
 import com.back.domain.report.report.event.ReportCreatedEvent;
 import com.back.domain.report.report.repository.ReportRepository;
@@ -83,8 +84,11 @@ public class ReportService {
     }
 
     // 관리자용 신고 목록 페이징 조회
-    public Page<Report> getReportsForAdmin(Pageable pageable) {
-        return reportRepository.findAllWithMember(pageable);
+    public Page<Report> findAllWithMember(ReportStatus status, Pageable pageable) {
+        if (status == null) {
+            return reportRepository.findAllWithMember(pageable);
+        }
+        return reportRepository.findAllWithMemberAndStatus(status, pageable);
     }
 
     // 특정 신고서 상세 증거 대화 조회 및 인물 동적 라벨링
