@@ -7,9 +7,12 @@ import com.back.domain.chat.chatRoomMessage.service.ChatMessageService;
 import com.back.domain.chat.chatRoomParticipant.entity.ChatRoomParticipant;
 import com.back.domain.chat.chatRoomParticipant.service.ChatRoomParticipantService;
 import com.back.domain.member.member.entity.Member;
+import com.back.domain.report.report.dto.ReportAdmDetailDto;
 import com.back.domain.report.report.entity.Report;
+import com.back.domain.report.report.entity.ReportedMessage;
 import com.back.domain.report.report.event.ReportCreatedEvent;
 import com.back.domain.report.report.repository.ReportRepository;
+import com.back.domain.report.report.repository.ReportedMessageRepository;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -32,6 +35,7 @@ public class ReportService {
     private final ChatMessageService chatMessageService;
     private final ChatRoomParticipantService chatRoomParticipantService;
     private final ApplicationEventPublisher eventPublisher;
+    private final ReportedMessageRepository reportedMessageRepository;
 
     @Transactional
     public Report createReport(Member reporter, UUID roomId, UUID reportedMessageId, String reason) {
@@ -80,5 +84,53 @@ public class ReportService {
     // 관리자용 신고 목록 페이징 조회
     public Page<Report> getReportsForAdmin(Pageable pageable) {
         return reportRepository.findAllWithMember(pageable);
+    }
+
+    // 특정 신고서 상세 증거 대화 조회 및 인물 동적 라벨링
+    public ReportAdmDetailDto getReportDetailForAdmin(UUID reportId) {
+        // 1. 신고서 단건 조회 (없으면 404-1)
+        Report report = reportRepository.findWithMemberById(reportId)
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 신고서입니다."));
+
+        // 2. 해당 신고서에 종속된 백업 대화 목록 시간순(ASC) 획득
+        List<ReportedMessage> backupMessages = reportedMessageRepository.findByReportIdOrderBySentAtAsc(reportId);
+
+        // 3. 동적 가독성 라벨링 매핑 정보 셋업
+        UUID reporterId = report.getReporter() != null ? report.getReporter().getId() : null;
+        UUID reportedId = report.getReported() != null ? report.getReported().getId() : null;
+
+        char participantSuffix = 'A';
+        Map<UUID, String> participantMap = new HashMap<>();
+        List<ReportAdmDetailDto.ReportedMessageAdmDto> messageDtos = new ArrayList<>();
+
+        for (ReportedMessage msg : backupMessages) {
+            String label;
+            UUID senderId = msg.getSenderMemberId();
+
+            if (reporterId != null && reporterId.equals(senderId)) {
+                label = "신고자";
+            } else if (reportedId != null && reportedId.equals(senderId)) {
+                label = "피신고자";
+            } else {
+                // 처음 등장하는 제3의 참여자인 경우에만 직관적으로 맵에 넣고 알파벳 증가
+                if (!participantMap.containsKey(senderId)) {
+                    participantMap.put(senderId, "참여자 " + participantSuffix);
+                    participantSuffix++; // 신규 참여자 최초 등록 시점에만 1씩 증가
+                }
+                label = participantMap.get(senderId);
+            }
+
+
+            // ReportedMessageAdmDto 객체 생성 및 적재
+            messageDtos.add(new ReportAdmDetailDto.ReportedMessageAdmDto(
+                    msg.getSenderNickname(),
+                    label,
+                    msg.getContent(),
+                    msg.getSentAt(),
+                    msg.isTarget()
+            ));
+        }
+
+        return new ReportAdmDetailDto(report, messageDtos);
     }
 }
