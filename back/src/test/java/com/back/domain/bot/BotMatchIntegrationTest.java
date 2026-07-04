@@ -42,11 +42,11 @@ class BotMatchIntegrationTest {
     }
 
     @Test
-    @DisplayName("40초가 안 지났으면 실제 유저가 없어도 봇과 매칭되지 않는다")
+    @DisplayName("35초가 안 지났으면 실제 유저가 없어도 봇과 매칭되지 않는다")
     void 그레이스_기간_전에는_봇_매칭_안됨() {
-        // Given - 30초 전 요청 (팀의 Tier2 임계값은 지났지만, 봇 폴백 임계값 40초는 아직)
+        // Given - 30초 전 요청 (팀의 Tier2 임계값은 지났지만, 봇 폴백 임계값 35초는 아직)
         Member user = memberService.join("bot_grace_early@test.com", "1234", Industry.IT, "USER");
-        MatchRequest userRequest = createPendingRequest(user, Situation.NIGHT_WORK, 35);
+        MatchRequest userRequest = createPendingRequest(user, Situation.NIGHT_WORK, 32);
 
         // When
         matchRequestService.tryMatch(userRequest);
@@ -57,11 +57,11 @@ class BotMatchIntegrationTest {
     }
 
     @Test
-    @DisplayName("40초가 지나면 실제 유저를 못 찾은 요청이 봇과 매칭된다")
+    @DisplayName("35초가 지나면 실제 유저를 못 찾은 요청이 봇과 매칭된다")
     void 그레이스_기간_지나면_봇과_매칭() {
-        // Given - 41초 전 요청 (봇 폴백 임계값 40초 초과)
+        // Given - 41초 전 요청 (봇 폴백 임계값 35초 초과)
         Member user = memberService.join("bot_grace_fallback@test.com", "1234", Industry.IT, "USER");
-        MatchRequest userRequest = createPendingRequest(user, Situation.NIGHT_WORK, 41);
+        MatchRequest userRequest = createPendingRequest(user, Situation.NIGHT_WORK, 36);
 
         // When
         matchRequestService.tryMatch(userRequest);
@@ -75,11 +75,11 @@ class BotMatchIntegrationTest {
     @Test
     @DisplayName("실제 유저가 있으면 40초가 지나도 봇이 아니라 실제 유저와 매칭된다")
     void 실유저_있으면_봇보다_우선() {
-        // Given - 둘 다 41초 전 요청, 같은 산업군
+        // Given - 둘 다361초 전 요청, 같은 산업군
         Member userA = memberService.join("bot_priority_a@test.com", "1234", Industry.IT, "USER");
         Member userB = memberService.join("bot_priority_b@test.com", "1234", Industry.IT, "USER");
-        MatchRequest reqA = createPendingRequest(userA, Situation.NIGHT_WORK, 41);
-        MatchRequest reqB = createPendingRequest(userB, Situation.MEETING_BOMB, 41);
+        MatchRequest reqA = createPendingRequest(userA, Situation.NIGHT_WORK, 36);
+        MatchRequest reqB = createPendingRequest(userB, Situation.MEETING_BOMB, 36);
 
         // When
         matchRequestService.retryPendingMatches();

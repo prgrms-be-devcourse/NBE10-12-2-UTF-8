@@ -37,11 +37,11 @@ public class MatchRequestService {
     private final ChatRoomService chatRoomService;
     private final ApplicationEventPublisher eventPublisher;
 
-    private static final long TIER1_THRESHOLD_SECONDS = 5; // 15초 후 유사 상황 매칭
-    private static final long TIER2_THRESHOLD_SECONDS = 10; // 30초 후 산업군 전체 매칭
+    private static final long TIER1_THRESHOLD_SECONDS = 15; // 15초 후 유사 상황 매칭
+    private static final long TIER2_THRESHOLD_SECONDS = 30; // 30초 후 산업군 전체 매칭
     // 30초(Tier2)까지도 실제 유저를 못 찾으면, 이 시점부터 봇으로 폴백한다.
     // Tier2보다 늦게 잡아서 "실제 사람끼리 매칭될 기회"를 최대한 먼저 준다.
-    private static final long BOT_FALLBACK_THRESHOLD_SECONDS = 15;
+    private static final long BOT_FALLBACK_THRESHOLD_SECONDS = 35;
 
     private List<MatchRequest> findCandidates(Industry industry, Situation situation, long elapsedSeconds) {
         if (elapsedSeconds < TIER1_THRESHOLD_SECONDS) {
