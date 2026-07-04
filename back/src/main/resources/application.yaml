@@ -55,6 +55,8 @@ custom:
     expirationSeconds: "#{60*30}"
   refreshToken:
     expirationSeconds: "#{60*60*24*30}"
+  bot:
+    groq-api-key: ${GROQ_API_KEY:}
 management:
   endpoints:
     web:

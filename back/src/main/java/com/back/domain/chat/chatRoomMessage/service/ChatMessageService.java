@@ -1,5 +1,7 @@
 package com.back.domain.chat.chatRoomMessage.service;
 
+import com.back.domain.bot.BotAccounts;
+import com.back.domain.bot.BotReplyTriggerEvent;
 import com.back.domain.chat.chatRoom.entity.ChatRoom;
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.chat.chatRoom.repository.ChatRoomRepository;
@@ -11,11 +13,13 @@ import com.back.domain.chat.chatRoomParticipant.repository.ChatRoomParticipantRe
 import com.back.domain.member.member.entity.Member;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -25,6 +29,7 @@ public class ChatMessageService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomParticipantRepository chatRoomParticipantRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ChatRoomMessageResponseDto sendMessage(UUID roomId, Member sender, String content) {
@@ -56,7 +61,21 @@ public class ChatMessageService {
                 new ChatMessage(chatRoom, participant, content)
         );
 
+        // 사람이(봇이 아닌 발신자가) 봇이 참여 중인 방에 메시지를 보내면, 봇이 맥락에 맞게 응답하게 트리거
+        if (!BotAccounts.isBotEmail(sender.getEmail())) {
+            findBotParticipant(roomId).ifPresent(bot ->
+                    eventPublisher.publishEvent(new BotReplyTriggerEvent(roomId, bot.getId()))
+            );
+        }
+
         return new ChatRoomMessageResponseDto(message, sender.getId());
+    }
+
+    private Optional<Member> findBotParticipant(UUID roomId) {
+        return chatRoomParticipantRepository.findByChatRoomId(roomId).stream()
+                .map(ChatRoomParticipant::getMember)
+                .filter(m -> BotAccounts.isBotEmail(m.getEmail()))
+                .findFirst();
     }
 
     public ChatMessage getMessage(UUID messageId) {

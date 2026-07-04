@@ -32,7 +32,12 @@ public class MatchRequest extends BaseEntity {
 
     private LocalDateTime requestedAt;
 
-
+    // 비관적 락(@Lock)이 DB 엔진(H2 등)에 따라 기대만큼 안 먹힐 수 있어서,
+    // 낙관적 락으로 이중 안전장치를 건다. 두 트랜잭션이 같은 row를 동시에 MATCHED로
+    // 바꾸려고 하면, 나중에 커밋하는 쪽이 이 버전 충돌로 실패한다.
+    @Version
+    private Long version;
+    
     public MatchRequest(Member member, Situation situation) {
         this.member = member;
         this.industry = member.getIndustry();
