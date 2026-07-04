@@ -25,7 +25,7 @@ public class BotAiClient {
 
     // Groq가 llama-3.x 계열을 deprecate하면서 권장하는 범용 모델.
     // 우리는 1~2문장 짧은 응답만 필요해서 작은 모델(20b)로도 충분함.
-    private static final String MODEL = "openai/gpt-oss-20b";
+    private static final String MODEL = "llama-3.3-70b-versatile";
     private static final String ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
     public boolean isEnabled() {
@@ -44,17 +44,25 @@ public class BotAiClient {
 
         try {
             List<Map<String, String>> messages = new java.util.ArrayList<>();
-            messages.add(Map.of("role", "system", "content", systemInstruction));
+            messages.add(Map.of(
+                    "role",
+                    "system",
+                    "content",
+                    systemInstruction
+            ));
+
             conversation.forEach(turn -> messages.add(Map.of(
-                    "role", turn.getKey() ? "assistant" : "user",
-                    "content", turn.getValue()
+                    "role",
+                    turn.getKey() ? "assistant" : "user",
+                    "content",
+                    turn.getValue()
             )));
 
             Map<String, Object> body = Map.of(
                     "model", MODEL,
                     "messages", messages,
-                    "temperature", 0.8,
-                    "max_tokens", 150
+                    "temperature", 0.2,
+                    "max_tokens", 40
             );
 
             String response = restClient.post()
