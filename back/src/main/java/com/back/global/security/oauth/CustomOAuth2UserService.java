@@ -16,7 +16,8 @@ import java.util.Map;
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
     private final MemberService memberService;
 
-    public OAuth2User loadUser(OAuth2UserRequest userRequest) {
+@Override
+public OAuth2User loadUser(OAuth2UserRequest userRequest) {
         OAuth2User oAuth2User = new DefaultOAuth2UserService().loadUser(userRequest);
         Map<String, Object> attributes = oAuth2User.getAttributes();
 
