@@ -10,7 +10,11 @@ public class GoogleUserInfo implements OAuth2UserInfo{
         this.attributes = attributes;
     }
     public String getProviderId() {
-        return String.valueOf(attributes.get("sub"));
+        Object sub = attributes.get("sub");
+        if (sub == null) {
+            throw new IllegalArgumentException("Google Provider ID (sub)가 존재하지 않습니다.");
+        }
+        return String.valueOf(sub);
     }
     public String getEmail() {
         return (String) attributes.get("email");

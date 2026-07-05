@@ -9,6 +9,7 @@ import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.repository.MemberRepository;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -55,8 +56,14 @@ public class MemberService {
             return existingMember.get();
         }
 
-        Member newMember = Member.ofOAuth(email, provider, providerId);
-        return memberRepository.save(newMember);
+        try {
+            Member newMember = Member.ofOAuth(email, provider, providerId);
+            return memberRepository.save(newMember);
+        } catch (DataIntegrityViolationException e) {
+            // 동시에 같은 (provider, providerId)로 로그인 시도가 들어와 다른 요청이 먼저 저장한 경우
+            return memberRepository.findByProviderAndProviderId(provider, providerId)
+                    .orElseThrow(() -> e);
+        }
     }
 
     public void checkPassword(Member member, String password) {

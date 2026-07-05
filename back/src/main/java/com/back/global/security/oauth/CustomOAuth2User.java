@@ -41,6 +41,6 @@ public class CustomOAuth2User implements OAuth2User {
 
     @Override
     public String getName() {
-        return (String) attributes.get(nameAttributeKey);
+        return String.valueOf(attributes.get(nameAttributeKey));
     }
 }
