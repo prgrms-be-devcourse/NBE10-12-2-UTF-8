@@ -3,6 +3,7 @@ package com.back.domain.member.member.service;
 import com.back.domain.match.matchRequest.dto.MatchHistoryDto;
 import com.back.domain.match.matchRequest.service.MatchRequestService;
 import com.back.domain.member.member.dto.MemberAdmDto;
+import com.back.domain.member.member.entity.AuthProvider;
 import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.repository.MemberRepository;
@@ -44,6 +45,18 @@ public class MemberService {
         Member member = new Member(email, encodedPassword, industry, role);
 
         return memberRepository.save(member);
+    }
+
+    @Transactional
+    public Member findOrCreateOAuthMember(String email, AuthProvider provider, String providerId) {
+        Optional<Member> existingMember = memberRepository.findByProviderAndProviderId(provider, providerId);
+
+        if (existingMember.isPresent()) {
+            return existingMember.get();
+        }
+
+        Member newMember = Member.ofOAuth(email, provider, providerId);
+        return memberRepository.save(newMember);
     }
 
     public void checkPassword(Member member, String password) {
