@@ -1,6 +1,7 @@
 package com.back.domain.member.member.controller;
 import com.back.domain.match.matchRequest.dto.MatchHistoryDto;
 import com.back.domain.member.member.dto.MemberDto;
+import com.back.domain.member.member.dto.OAuthExchangeResult;
 import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.service.MemberService;
@@ -34,6 +35,8 @@ public class ApiV1MemberController {
     private final Rq rq;
     @Value("${custom.accessToken.expirationSeconds}")
     private int accessTokenExpirationSeconds;
+    @Value("${custom.refreshToken.expirationSeconds}")
+    private int refreshTokenExpirationSeconds;
 
     public record MemberSignupReq(
             @NotBlank
@@ -55,6 +58,19 @@ public class ApiV1MemberController {
             @Size(min = 4, max = 30)
             String password
     ) {}
+
+    public record OAuthLoginReq(
+            @NotBlank
+            String code
+    ){}
+
+    public record OAuthExchangeRes(
+            String grantType,
+            String accessToken,
+            String refreshToken,
+            int accessTokenExpiresIn,
+            boolean needsOnboarding
+    ){}
 
     public record MemberLoginRes(
             String grantType,
@@ -89,7 +105,7 @@ public class ApiV1MemberController {
         rq.setCookie(
                 "refreshToken",
                 refreshToken.toString(),
-                60 * 60 * 24 * 30
+                refreshTokenExpirationSeconds
         );
         return new RsData<>(
                 "200-1",
@@ -101,6 +117,27 @@ public class ApiV1MemberController {
                         accessTokenExpirationSeconds)
         );
 
+    }
+
+    @PostMapping("/oauth/exchange")
+    @Operation(summary = "소셜 로그인 code 교환")
+    public RsData<OAuthExchangeRes> oauthExchange(@Valid @RequestBody OAuthLoginReq req) {
+        OAuthExchangeResult result = memberService.exchangeOAuthCode(req.code());
+
+        rq.setCookie("accessToken", result.accessToken(), accessTokenExpirationSeconds);
+        rq.setCookie("refreshToken", result.refreshToken().toString(), refreshTokenExpirationSeconds);
+
+        return new RsData<>(
+                "200-1",
+                "소셜 로그인 성공",
+                new OAuthExchangeRes(
+                        "Bearer",
+                        result.accessToken(),
+                        result.refreshToken().toString(),
+                        accessTokenExpirationSeconds,
+                        result.needsOnboarding()
+                )
+        );
     }
 
     @PostMapping("/logout")

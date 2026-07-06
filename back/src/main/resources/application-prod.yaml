@@ -6,3 +6,5 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
+custom:
+  frontendBaseUrl: https://frontend-production-00f68.up.railway.app
