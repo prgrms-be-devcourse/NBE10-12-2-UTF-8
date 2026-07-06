@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiSignup, INDUSTRY_CODES, sanitizeEmailInput } from '@/lib/api';
+import { apiSignup, INDUSTRY_CODES, isValidEmail } from '@/lib/api';
 
 const INDUSTRIES = [
   { name: 'IT/개발',       color: '#3b7ff2' },
@@ -38,8 +38,9 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const emailOk = isValidEmail(email);
   const pwOk = password.length >= 4;
-  const canSubmit = !!(email && pwOk && password === confirm && selected && !loading);
+  const canSubmit = !!(emailOk && pwOk && password === confirm && selected && !loading);
 
   const handleSignup = async () => {
     if (!canSubmit) return;
@@ -68,10 +69,13 @@ export default function SignupPage() {
           <input
             type="email"
             value={email}
-            onChange={e => setEmail(sanitizeEmailInput(e.target.value))}
+            onChange={e => setEmail(e.target.value)}
             placeholder="work@company.com"
             style={{ width: '100%', height: 46, border: '1px solid #dadce0', borderRadius: 8, padding: '0 14px', fontSize: 15, color: '#202124', outline: 'none', boxSizing: 'border-box' }}
           />
+          <div style={{ fontSize: 11.5, color: emailOk ? '#34a06b' : '#9aa0a6', marginTop: 6 }}>
+            {emailOk ? '✓ 사용 가능한 이메일 형식이에요' : '올바른 이메일 형식으로 입력해주세요 (예: work@company.com)'}
+          </div>
         </div>
 
         {/* Password row */}
