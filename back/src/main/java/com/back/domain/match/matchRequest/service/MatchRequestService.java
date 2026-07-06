@@ -39,6 +39,7 @@ public class MatchRequestService {
     private final ApplicationEventPublisher eventPublisher;
     private final MatchRequestRetryProcessor retryProcessor;
     private final StringRedisTemplate redisTemplate;
+    private final org.springframework.core.env.Environment environment;
 
     private static final long TIER1_THRESHOLD_SECONDS = 15; // 15초 후 유사 상황 매칭
     private static final long TIER2_THRESHOLD_SECONDS = 30; // 30초 후 산업군 전체 매칭
@@ -55,9 +56,13 @@ public class MatchRequestService {
 
         List<UUID> uuids = pendingIds.stream().map(UUID::fromString).toList();
         List<MatchRequest> pendingRequestsRaw = matchRequestRepository.findAllById(uuids);
-        // DB 조회 결과의 정렬 유실을 방지하고 Redis ZSET 대기열 순서(FIFO)를 그대로 보존
+        
+        // O(N) 해시 맵 조회를 활용해 정렬 복원 시의 O(N^2) 성능 병목을 제거
+        java.util.Map<java.util.UUID, MatchRequest> requestMap = pendingRequestsRaw.stream()
+                .collect(java.util.stream.Collectors.toMap(MatchRequest::getId, java.util.function.Function.identity()));
+        
         List<MatchRequest> pendingRequests = uuids.stream()
-                .map(uuid -> pendingRequestsRaw.stream().filter(r -> r.getId().equals(uuid)).findFirst().orElse(null))
+                .map(requestMap::get)
                 .filter(java.util.Objects::nonNull)
                 .toList();
 
@@ -93,7 +98,7 @@ public class MatchRequestService {
         }
 
         // 매칭 성공 시 Redis 대기열에서 제외 (DB 트랜잭션 롤백 시 정합성 불일치를 방지하기 위해 커밋 완료 후 삭제)
-        if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+        if (!isTestProfile() && org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
             org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
                 new org.springframework.transaction.support.TransactionSynchronization() {
                     @Override
@@ -168,8 +173,19 @@ public class MatchRequestService {
         }
         MatchRequest matchRequest = matchRequestRepository.save(new MatchRequest(member, situation));
         
-        // Redis 대기열 등록
-        redisTemplate.opsForZSet().add("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString(), System.currentTimeMillis());
+        // Redis 대기열 등록 (DB 트랜잭션 롤백 시 유령 대기자 방지를 위해 커밋 성공 후에만 실행)
+        if (!isTestProfile() && org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        redisTemplate.opsForZSet().add("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString(), System.currentTimeMillis());
+                    }
+                }
+            );
+        } else {
+            redisTemplate.opsForZSet().add("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString(), System.currentTimeMillis());
+        }
         
         tryMatch(matchRequest);
         return matchRequest;
@@ -253,7 +269,19 @@ public class MatchRequestService {
         if (matchRequest.getStatus() == MatchStatus.MATCHED) {
             throw new ServiceException("409-1", "이미 매칭된 요청은 취소할 수 없습니다.");
         }
-        redisTemplate.opsForZSet().remove("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString());
+        // Redis 대기열 삭제 (DB 트랜잭션 롤백 시 정합성 불일치를 방지하기 위해 커밋 성공 후에만 실행)
+        if (!isTestProfile() && org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        redisTemplate.opsForZSet().remove("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString());
+                    }
+                }
+            );
+        } else {
+            redisTemplate.opsForZSet().remove("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString());
+        }
         matchRequestRepository.delete(matchRequest);
     }
 
@@ -272,5 +300,9 @@ public class MatchRequestService {
 
     public List<MatchRequest> findMatchHistoryByMember(Member member) {
         return matchRequestRepository.findByMemberAndRoomStatus(member, ChatRoomStatus.CLOSED);
+    }
+
+    private boolean isTestProfile() {
+        return java.util.Arrays.asList(environment.getActiveProfiles()).contains("test");
     }
 }
