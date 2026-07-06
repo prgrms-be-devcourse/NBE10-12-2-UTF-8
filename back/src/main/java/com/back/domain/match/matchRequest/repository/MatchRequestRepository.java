@@ -14,31 +14,55 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.List;
 
 public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID> {
     boolean existsByMemberAndStatus(Member member, MatchStatus status);
 
-    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry AND r.situation = :situation AND r.status = :status ORDER BY r.requestedAt ASC")
+    @Query("""
+           SELECT r FROM MatchRequest r
+           JOIN FETCH r.member
+           WHERE r.industry = :industry AND r.situation = :situation AND r.status = :status
+           ORDER BY r.requestedAt ASC
+           """)
     List<MatchRequest> findPendingByIndustryAndSituation(
             @Param("industry") Industry industry,
             @Param("situation") Situation situation,
             @Param("status") MatchStatus status);
 
     // 같은 업종 + 비슷한 상황 여러개
-    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry AND r.situation IN :situations AND r.status = :status ORDER BY r.requestedAt ASC")
+    @Query("""
+           SELECT r FROM MatchRequest r
+           JOIN FETCH r.member
+           WHERE r.industry = :industry AND r.situation IN :situations AND r.status = :status
+           ORDER BY r.requestedAt ASC
+           """)
     List<MatchRequest> findPendingByIndustryAndSituations(
             @Param("industry") Industry industry,
             @Param("situations") Collection<Situation> situations,
             @Param("status") MatchStatus status);
 
-    @Query("SELECT r FROM MatchRequest r WHERE r.industry = :industry  AND r.status = :status ORDER BY r.requestedAt ASC")
+    @Query("""
+           SELECT r FROM MatchRequest r
+           JOIN FETCH r.member
+           WHERE r.industry = :industry AND r.status = :status
+           ORDER BY r.requestedAt ASC
+           """)
     List<MatchRequest> findPendingByIndustry(
             @Param("industry") Industry industry,
             @Param("status") MatchStatus status);
 
-    @Query("SELECT r FROM MatchRequest r WHERE r.status = :status ORDER BY r.requestedAt ASC")
+    // retryPendingMatches의 재시도 대상 조회 - member까지 즉시 로딩해서
+    // REQUIRES_NEW로 트랜잭션이 분리되는 재시도 처리 도중 지연 로딩 프록시가
+    // 세션 없이 초기화되는 LazyInitializationException을 방지한다.
+    @Query("""
+           SELECT r FROM MatchRequest r
+           JOIN FETCH r.member
+           WHERE r.status = :status
+           ORDER BY r.requestedAt ASC
+           """)
     List<MatchRequest> findAllByStatus(@Param("status") MatchStatus status);
 
     @Query("SELECT COUNT(DISTINCT r.room.id) FROM MatchRequest r WHERE r.status = :status AND r.createdAt BETWEEN :start AND :end")
@@ -55,12 +79,6 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
 
     List<MatchRequest> findByMemberAndRoomStatus(Member member, ChatRoomStatus status);
 
-    // 동시성 문제의 안전장치: PENDING 상태일 때만 MATCHED로 바꾸는 원자적(compare-and-swap) 업데이트.
-    // 두 트랜잭션이 같은 row를 동시에 노려도 DB가 UPDATE 문을 순서대로 처리해줘서,
-    // 딱 한쪽만 1(성공)을 받고 나머지는 0(이미 남이 채감)을 받는다.
-    // 참고: 이 벌크 UPDATE는 @Version(낙관적 락)을 우회한다.
-    // CAS(WHERE status='PENDING') 조건 자체가 동시성 안전장치 역할을 한다.
-    // MatchRequestRepository.java
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "UPDATE match_request SET status = 'MATCHED', version = version + 1, modified_at = CURRENT_TIMESTAMP " +
             "WHERE id = :id AND status = 'PENDING'", nativeQuery = true)
@@ -74,10 +92,13 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
     @Query(value = "UPDATE match_request SET status = 'PENDING', version = version + 1 WHERE id = :id", nativeQuery = true)
     void revertToPending(@Param("id") UUID id);
 
-    // 매칭 성사 시 양쪽 MatchRequest가 거의 동시에 modifiedAt이 갱신되므로,
-    // room 기준 중복 제거는 서비스 레이어에서 처리한다 (넉넉히 pageable로 가져와 추림)
-    // room은 LAZY라 getId()만 쓰면 프록시 초기화 없이 값을 얻지만(N+1 안 남),
-    // 이후 room의 다른 필드를 참조하게 되는 실수를 방지하기 위해 fetch join을 명시해둔다
     @Query("SELECT mr FROM MatchRequest mr JOIN FETCH mr.room WHERE mr.status = :status ORDER BY mr.modifiedAt DESC")
     List<MatchRequest> findRecentByStatus(@Param("status") MatchStatus status, Pageable pageable);
+
+    @Query("""
+           SELECT r FROM MatchRequest r
+           JOIN FETCH r.member
+           WHERE r.id = :id
+           """)
+    Optional<MatchRequest> findByIdWithMember(@Param("id") UUID id);
 }

@@ -1,5 +1,7 @@
 package com.back.domain.bot;
 
+import com.back.domain.chat.chatRoom.repository.ChatRoomRepository;
+import com.back.domain.chat.chatRoomParticipant.repository.ChatRoomParticipantRepository;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.match.matchRequest.entity.Situation;
@@ -9,23 +11,24 @@ import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.repository.MemberRepository;
 import com.back.domain.member.member.service.MemberService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
+// BotMatchIntegrationTest.java - 전체 재작성
 @ActiveProfiles("test")
 @SpringBootTest
-@Transactional
 class BotMatchIntegrationTest {
-
     @Autowired
     private MemberService memberService;
     @Autowired
@@ -34,6 +37,21 @@ class BotMatchIntegrationTest {
     private MatchRequestService matchRequestService;
     @Autowired
     private MatchRequestRepository matchRequestRepository;
+    @Autowired
+    private ChatRoomParticipantRepository chatRoomParticipantRepository;
+    @Autowired
+    private ChatRoomRepository chatRoomRepository;
+
+    private final List<Member> createdMembers = new ArrayList<>();
+
+    @AfterEach
+    void cleanUp() {
+        matchRequestRepository.deleteAll();
+        chatRoomParticipantRepository.deleteAll();
+        chatRoomRepository.deleteAll();
+        createdMembers.forEach(memberRepository::delete);
+        createdMembers.clear();
+    }
 
     private MatchRequest createPendingRequest(Member member, Situation situation, long secondsAgo) {
         MatchRequest matchRequest = matchRequestRepository.save(new MatchRequest(member, situation));
@@ -44,14 +62,12 @@ class BotMatchIntegrationTest {
     @Test
     @DisplayName("35초가 안 지났으면 실제 유저가 없어도 봇과 매칭되지 않는다")
     void 그레이스_기간_전에는_봇_매칭_안됨() {
-        // Given - 30초 전 요청 (팀의 Tier2 임계값은 지났지만, 봇 폴백 임계값 35초는 아직)
         Member user = memberService.join("bot_grace_early@test.com", "1234", Industry.IT, "USER");
+        createdMembers.add(user);
         MatchRequest userRequest = createPendingRequest(user, Situation.NIGHT_WORK, 32);
 
-        // When
         matchRequestService.tryMatch(userRequest);
 
-        // Then - 다른 실제 유저가 없으니 여전히 PENDING
         MatchRequest refreshed = matchRequestRepository.findById(userRequest.getId()).orElseThrow();
         assertThat(refreshed.getStatus()).isEqualTo(MatchStatus.PENDING);
     }
@@ -59,14 +75,12 @@ class BotMatchIntegrationTest {
     @Test
     @DisplayName("35초가 지나면 실제 유저를 못 찾은 요청이 봇과 매칭된다")
     void 그레이스_기간_지나면_봇과_매칭() {
-        // Given - 41초 전 요청 (봇 폴백 임계값 35초 초과)
         Member user = memberService.join("bot_grace_fallback@test.com", "1234", Industry.IT, "USER");
+        createdMembers.add(user);
         MatchRequest userRequest = createPendingRequest(user, Situation.NIGHT_WORK, 36);
 
-        // When
         matchRequestService.tryMatch(userRequest);
 
-        // Then
         MatchRequest refreshed = matchRequestRepository.findById(userRequest.getId()).orElseThrow();
         assertThat(refreshed.getStatus()).isEqualTo(MatchStatus.MATCHED);
         assertThat(refreshed.getRoom()).isNotNull();
@@ -75,24 +89,21 @@ class BotMatchIntegrationTest {
     @Test
     @DisplayName("실제 유저가 있으면 40초가 지나도 봇이 아니라 실제 유저와 매칭된다")
     void 실유저_있으면_봇보다_우선() {
-        // Given - 둘 다361초 전 요청, 같은 산업군
         Member userA = memberService.join("bot_priority_a@test.com", "1234", Industry.IT, "USER");
         Member userB = memberService.join("bot_priority_b@test.com", "1234", Industry.IT, "USER");
+        createdMembers.add(userA);
+        createdMembers.add(userB);
         MatchRequest reqA = createPendingRequest(userA, Situation.NIGHT_WORK, 36);
         MatchRequest reqB = createPendingRequest(userB, Situation.MEETING_BOMB, 36);
 
-        // When
         matchRequestService.retryPendingMatches();
 
-        // Then - 봇이 아니라 서로 매칭돼야 함
         MatchRequest refreshedA = matchRequestRepository.findById(reqA.getId()).orElseThrow();
         MatchRequest refreshedB = matchRequestRepository.findById(reqB.getId()).orElseThrow();
-
         assertThat(refreshedA.getStatus()).isEqualTo(MatchStatus.MATCHED);
         assertThat(refreshedB.getStatus()).isEqualTo(MatchStatus.MATCHED);
         assertThat(refreshedA.getRoom().getId()).isEqualTo(refreshedB.getRoom().getId());
 
-        // 봇 계정은 매칭에 관여 안 했어야 함 (봇 요청 자체가 새로 안 생김)
         Member bot = memberRepository.findByEmail(BotAccounts.emailFor(Industry.IT)).orElseThrow();
         boolean botHasMatchRequest = matchRequestRepository.findAll().stream()
                 .anyMatch(r -> r.getMember().getId().equals(bot.getId()));

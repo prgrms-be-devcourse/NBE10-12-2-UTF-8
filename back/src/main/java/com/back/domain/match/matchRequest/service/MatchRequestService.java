@@ -36,6 +36,7 @@ public class MatchRequestService {
     private final MemberRepository memberRepository;
     private final ChatRoomService chatRoomService;
     private final ApplicationEventPublisher eventPublisher;
+    private final MatchRequestRetryProcessor retryProcessor;
 
     private static final long TIER1_THRESHOLD_SECONDS = 15; // 15초 후 유사 상황 매칭
     private static final long TIER2_THRESHOLD_SECONDS = 30; // 30초 후 산업군 전체 매칭
@@ -142,11 +143,16 @@ public class MatchRequestService {
     }
 
     @Transactional
-    public void tryMatch(MatchRequest matchRequest) {
+    public void tryMatch(MatchRequest matchRequestParam) {
+        // 호출자가 넘긴 matchRequest가 다른 트랜잭션에서 만들어진 detached 엔티티일 수 있다
+        // (예: 테스트에서 save 직후 바로 넘기는 경우). member 프록시가 세션 없이 초기화
+        // 실패하는 걸 막기 위해, 이 트랜잭션 안에서 fetch join으로 다시 로딩한다.
+        MatchRequest matchRequest = matchRequestRepository.findByIdWithMember(matchRequestParam.getId())
+                .orElseThrow(() -> new ServiceException("404-1", "매칭 요청을 찾을 수 없습니다."));
+
         if (matchRequest.getStatus() == MatchStatus.MATCHED) {
             return;
         }
-        // 봇 자신의 요청은 여기서 다시 매칭 시도를 안 함 (matchWithBot이 이미 즉석에서 연결시킴)
         if (BotAccounts.isBotEmail(matchRequest.getMember().getEmail())) {
             return;
         }
@@ -170,19 +176,17 @@ public class MatchRequestService {
             matchWithBot(matchRequest);
         }
     }
-
     @Transactional
     public void retryPendingMatches() {
-        // TODO: 이 메서드는 단일 트랜잭션이라 루프 중 예외 발생 시
-        // 이미 성공한 다른 매칭 변경사항까지 rollback-only로 롤백될 수 있음.
-        // REQUIRES_NEW로 분리 시도했으나 테스트의 @Transactional 격리 범위 밖
-        // 조회 문제로 회귀 발생(2026-07-06) - 테스트 구조 개선과 함께 재작업 필요.
-        List<MatchRequest> pendingList = matchRequestRepository.findAllByStatus(MatchStatus.PENDING);
-        for (MatchRequest request : pendingList) {
+        List<UUID> pendingIds = matchRequestRepository.findAllByStatus(MatchStatus.PENDING).stream()
+                .map(MatchRequest::getId)
+                .toList();
+
+        for (UUID id : pendingIds) {
             try {
-                tryMatch(request);
+                retryProcessor.retryOne(id);
             } catch (Exception e) {
-                log.error("[MatchRequestService] 재시도 중 매칭 실패 - requestId: {}", request.getId(), e);
+                log.error("[MatchRequestService] 재시도 중 매칭 실패 - requestId: {}", id, e);
             }
         }
     }
