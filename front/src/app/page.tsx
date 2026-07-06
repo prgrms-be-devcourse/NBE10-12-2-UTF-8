@@ -84,7 +84,9 @@ export default function HomePage() {
           Object.fromEntries(stats.situationStats.map(s => [s.situation, s.count])),
         );
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('Failed to fetch home stats:', err);
+      });
   }, []);
 
   useEffect(() => {
