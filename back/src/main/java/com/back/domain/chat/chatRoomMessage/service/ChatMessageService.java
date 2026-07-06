@@ -14,6 +14,7 @@ import com.back.domain.member.member.entity.Member;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -87,6 +88,10 @@ public class ChatMessageService {
                 roomId,
                 targetMessage.getCreatedAt()
         );
+    }
+
+    public List<ChatMessage> getRecentMessages(UUID roomId, int limit) {
+        return chatMessageRepository.findRecentByChatRoomId(roomId, PageRequest.of(0, limit));
     }
 
     public List<ChatRoomMessageResponseDto> getMessages(UUID roomId, Member requester, LocalDateTime after) {

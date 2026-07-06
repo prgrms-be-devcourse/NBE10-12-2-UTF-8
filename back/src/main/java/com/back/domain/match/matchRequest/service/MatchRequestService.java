@@ -61,10 +61,6 @@ public class MatchRequestService {
         return matchRequestRepository.findPendingByIndustry(industry, MatchStatus.PENDING);
     }
 
-    // 두 MatchRequest를 실제로 매칭 확정 처리.
-    // 채팅방부터 만들고 나중에 검증하는 게 아니라 "둘 다 선점 성공했을 때만" 방을 만든다 -
-    // 그래야 동시 요청이 몰려도(예: retryPendingMatches가 여러 건을 반복 처리하는 중에
-    // 실제 유저의 새 요청이 동시에 들어오는 경우) 잘못된 방/참여자가 생기지 않는다.
     private void connect(MatchRequest matchRequest, MatchRequest other) {
         int claimedSelf = matchRequestRepository.claimPending(matchRequest.getId());
         int claimedOther = matchRequestRepository.claimPending(other.getId());
@@ -72,12 +68,11 @@ public class MatchRequestService {
         if (claimedSelf == 0 || claimedOther == 0) {
             // 둘 다 성공해야 유효한 매칭이다. 한쪽만 성공했다면 "매칭됨인데 방은 없는"
             // 상태로 영구히 남지 않게, 성공한 쪽을 다시 PENDING으로 되돌린다.
-            if (claimedSelf == 1) {
-                matchRequestRepository.revertToPending(matchRequest.getId());
-            }
-            if (claimedOther == 1) {
-                matchRequestRepository.revertToPending(other.getId());
-            }
+            // 단, 봇 전용 임시 요청이 선점됐다 실패한 경우엔 PENDING으로 되돌리지 않고 삭제한다 -
+            // 그대로 두면 대기열에 봇의 MatchRequest가 노출되어 실제 유저와 오작동 매칭될 수 있다.
+            revertOrDiscard(matchRequest, claimedSelf);
+            revertOrDiscard(other, claimedOther);
+
             log.warn("[MatchRequestService] 동시 매칭 충돌 감지, 이번 시도는 취소 - a={}, b={}",
                     matchRequest.getId(), other.getId());
             return;
@@ -96,6 +91,19 @@ public class MatchRequestService {
         other.matchWith(chatRoom);
 
         triggerBotReplyIfNeeded(matchRequest.getMember(), other.getMember(), chatRoom.getId());
+    }
+
+    // 선점 실패 시 처리: 봇 전용 임시 요청이면 대기열에 남기지 말고 삭제,
+    // 실제 유저 요청이면 다음 기회를 위해 PENDING으로 되돌린다.
+    private void revertOrDiscard(MatchRequest request, int claimed) {
+        if (claimed != 1) {
+            return; // 애초에 선점 안 됐으면 손댈 것 없음
+        }
+        if (BotAccounts.isBotEmail(request.getMember().getEmail())) {
+            matchRequestRepository.delete(request);
+        } else {
+            matchRequestRepository.revertToPending(request.getId());
+        }
     }
 
     // 실제 유저 상대를 못 찾고 봇 폴백 기준 시간이 지난 요청을, 그 시점에 즉석으로 만든
@@ -168,13 +176,6 @@ public class MatchRequestService {
         if (elapsedSeconds >= BOT_FALLBACK_THRESHOLD_SECONDS) {
             matchWithBot(matchRequest);
         }
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void tryMatchInNewTransaction(UUID matchRequestId) {
-        MatchRequest matchRequest = matchRequestRepository.findById(matchRequestId)
-                .orElseThrow(() -> new ServiceException("404-1", "매칭 요청을 찾을 수 없습니다."));
-        tryMatch(matchRequest);
     }
 
     @Transactional

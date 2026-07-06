@@ -44,9 +44,7 @@ public class BotReplyExecutor {
 
     private String generateReply(UUID roomId, Member bot) {
         // 최근 대화 이력 조회
-        List<ChatMessage> recentDesc = chatMessageService.getMessagesByRoom(roomId).stream()
-                .limit(HISTORY_LIMIT)
-                .toList();
+        List<ChatMessage> recentDesc = chatMessageService.getRecentMessages(roomId, HISTORY_LIMIT);
 
         // 마지막 메시지가 이미 봇이면 응답 안함
         if (!recentDesc.isEmpty()) {
