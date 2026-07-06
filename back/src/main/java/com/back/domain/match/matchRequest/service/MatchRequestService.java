@@ -17,6 +17,7 @@ import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,7 @@ public class MatchRequestService {
     private final ChatRoomService chatRoomService;
     private final ApplicationEventPublisher eventPublisher;
     private final MatchRequestRetryProcessor retryProcessor;
+    private final StringRedisTemplate redisTemplate;
 
     private static final long TIER1_THRESHOLD_SECONDS = 15; // 15초 후 유사 상황 매칭
     private static final long TIER2_THRESHOLD_SECONDS = 30; // 30초 후 산업군 전체 매칭
@@ -45,14 +47,27 @@ public class MatchRequestService {
     private static final long BOT_FALLBACK_THRESHOLD_SECONDS = 35;
 
     private List<MatchRequest> findCandidates(Industry industry, Situation situation, long elapsedSeconds) {
+        String key = "match:queue:" + industry.name();
+        Set<String> pendingIds = redisTemplate.opsForZSet().range(key, 0, -1);
+        if (pendingIds == null || pendingIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<UUID> uuids = pendingIds.stream().map(UUID::fromString).toList();
+        List<MatchRequest> pendingRequests = matchRequestRepository.findAllById(uuids);
+
         if (elapsedSeconds < TIER1_THRESHOLD_SECONDS) {
-            return matchRequestRepository.findPendingByIndustryAndSituation(industry, situation, MatchStatus.PENDING);
+            return pendingRequests.stream()
+                    .filter(r -> r.getSituation() == situation)
+                    .toList();
         }
         if (elapsedSeconds < TIER2_THRESHOLD_SECONDS) {
             Set<Situation> similarGroup = SituationSimilarity.getSimilarGroup(situation);
-            return matchRequestRepository.findPendingByIndustryAndSituations(industry, similarGroup, MatchStatus.PENDING);
+            return pendingRequests.stream()
+                    .filter(r -> similarGroup.contains(r.getSituation()))
+                    .toList();
         }
-        return matchRequestRepository.findPendingByIndustry(industry, MatchStatus.PENDING);
+        return pendingRequests;
     }
 
     private void connect(MatchRequest matchRequest, MatchRequest other) {
@@ -71,6 +86,10 @@ public class MatchRequestService {
                     matchRequest.getId(), other.getId());
             return;
         }
+
+        // 매칭 성공 시 Redis 대기열에서 즉시 제외
+        redisTemplate.opsForZSet().remove("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString());
+        redisTemplate.opsForZSet().remove("match:queue:" + other.getIndustry().name(), other.getId().toString());
 
         ChatRoom chatRoom = chatRoomService.createChatRoom(List.of(matchRequest.getMember(), other.getMember()));
         matchRequestRepository.assignRoom(matchRequest.getId(), chatRoom.getId());
@@ -131,6 +150,10 @@ public class MatchRequestService {
             throw new ServiceException("409-1", "이미 진행 중인 매칭 요청이 있습니다.");
         }
         MatchRequest matchRequest = matchRequestRepository.save(new MatchRequest(member, situation));
+        
+        // Redis 대기열 등록
+        redisTemplate.opsForZSet().add("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString(), System.currentTimeMillis());
+        
         tryMatch(matchRequest);
         return matchRequest;
     }
@@ -176,13 +199,22 @@ public class MatchRequestService {
             matchWithBot(matchRequest);
         }
     }
+
     @Transactional
     public void retryPendingMatches() {
-        List<UUID> pendingIds = matchRequestRepository.findAllByStatus(MatchStatus.PENDING).stream()
-                .map(MatchRequest::getId)
-                .toList();
+        List<UUID> allPendingIds = new java.util.ArrayList<>();
+        for (Industry ind : Industry.values()) {
+            String key = "match:queue:" + ind.name();
+            Set<String> ids = redisTemplate.opsForZSet().range(key, 0, -1);
+            if (ids != null) {
+                ids.stream().map(UUID::fromString).forEach(allPendingIds::add);
+            }
+        }
+        if (allPendingIds.isEmpty()) {
+            return;
+        }
 
-        for (UUID id : pendingIds) {
+        for (UUID id : allPendingIds) {
             try {
                 retryProcessor.retryOne(id);
             } catch (Exception e) {
@@ -204,6 +236,7 @@ public class MatchRequestService {
         if (matchRequest.getStatus() == MatchStatus.MATCHED) {
             throw new ServiceException("409-1", "이미 매칭된 요청은 취소할 수 없습니다.");
         }
+        redisTemplate.opsForZSet().remove("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString());
         matchRequestRepository.delete(matchRequest);
     }
 
@@ -212,6 +245,11 @@ public class MatchRequestService {
         LocalDateTime expiredBefore = LocalDateTime.now().minusMinutes(5);
         List<MatchRequest> expired = matchRequestRepository
                 .findExpiredPending(MatchStatus.PENDING, expiredBefore);
+        
+        for (MatchRequest request : expired) {
+            redisTemplate.opsForZSet().remove("match:queue:" + request.getIndustry().name(), request.getId().toString());
+        }
+        
         matchRequestRepository.deleteAll(expired);
     }
 
