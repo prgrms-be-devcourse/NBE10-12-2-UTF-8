@@ -10,11 +10,13 @@ import com.back.domain.chat.chatRoomMessage.entity.ChatMessage;
 import com.back.domain.chat.chatRoomMessage.repository.ChatMessageRepository;
 import com.back.domain.chat.chatRoomParticipant.entity.ChatRoomParticipant;
 import com.back.domain.chat.chatRoomParticipant.repository.ChatRoomParticipantRepository;
+import com.back.domain.chat.chatRoomMessage.dto.RedisChatMessageDto;
 import com.back.domain.member.member.entity.Member;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -31,19 +34,25 @@ public class ChatMessageService {
     private final ChatRoomParticipantRepository chatRoomParticipantRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Transactional
     public ChatRoomMessageResponseDto sendMessage(UUID roomId, Member sender, String content) {
+        // 메시지 내용 입력 여부 검증
         if (content == null || content.isBlank()) {
             throw new ServiceException("400-1", "메시지 내용을 입력해주세요.");
         }
+
+        // 메시지 500자 초과 검증
         if (content.length() > 500) {
             throw new ServiceException("400-2", "메시지는 500자를 초과할 수 없습니다.");
         }
 
+        // 채팅방 존재 여부 검증
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new ServiceException("404-1", "채팅방을 찾을 수 없습니다."));
 
+        // 종료된 채팅방에는 메시지 전송 불가
         if (chatRoom.getStatus() == ChatRoomStatus.CLOSED) {
             throw new ServiceException("409-1", "종료된 채팅방에는 메시지를 보낼 수 없습니다.");
         }
@@ -68,6 +77,10 @@ public class ChatMessageService {
                     .findFirst()
                     .ifPresent(bot -> eventPublisher.publishEvent(new BotReplyTriggerEvent(roomId, bot.getId())));
         }
+
+        // Redis 캐시 추가
+        String key = "chat:room:" + roomId + ":messages";
+        redisTemplate.opsForList().rightPush(key, new RedisChatMessageDto(message));
 
         return new ChatRoomMessageResponseDto(message, sender.getId());
     }
@@ -107,9 +120,44 @@ public class ChatMessageService {
             throw new ServiceException("200-3", "종료된 채팅방입니다.");
         }
 
-        List<ChatMessage> messages = (after != null)
-                ? chatMessageRepository.findByChatRoomIdAndCreatedAtAfterOrderByCreatedAtAsc(roomId, after)
-                : chatMessageRepository.findByChatRoomIdOrderByCreatedAtAsc(roomId);
+        String key = "chat:room:" + roomId + ":messages";
+        List<Object> cachedData = redisTemplate.opsForList().range(key, 0, -1);
+
+        if (cachedData != null && !cachedData.isEmpty()) {
+            // Redis 캐시 히트 (Cache Hit)
+            List<RedisChatMessageDto> cachedMessages = cachedData.stream()
+                    .map(obj -> (RedisChatMessageDto) obj)
+                    .toList();
+
+            if (after != null) {
+                cachedMessages = cachedMessages.stream()
+                        .filter(m -> m.getCreatedAt().isAfter(after))
+                        .toList();
+            }
+
+            return cachedMessages.stream()
+                    .map(cache -> new ChatRoomMessageResponseDto(cache, requester.getId()))
+                    .toList();
+        }
+
+        // Redis 캐시 미스 (Cache Miss) -> DB 조회 후 적재
+        List<ChatMessage> messages = chatMessageRepository.findByChatRoomIdOrderByCreatedAtAsc(roomId);
+
+        if (!messages.isEmpty()) {
+            List<RedisChatMessageDto> dtoList = messages.stream().map(RedisChatMessageDto::new).toList();
+            redisTemplate.opsForList().rightPushAll(key, dtoList.toArray());
+            
+            // 만약 이미 종료된 방이라면 24시간 만료 시간 설정
+            if (chatRoom.getStatus() == ChatRoomStatus.CLOSED) {
+                redisTemplate.expire(key, 24, TimeUnit.HOURS);
+            }
+        }
+
+        if (after != null) {
+            messages = messages.stream()
+                    .filter(m -> m.getCreatedAt().isAfter(after))
+                    .toList();
+        }
 
         return messages
                 .stream()

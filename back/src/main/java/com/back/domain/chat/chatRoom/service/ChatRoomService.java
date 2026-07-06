@@ -7,12 +7,14 @@ import com.back.domain.chat.chatRoomParticipant.service.ChatRoomParticipantServi
 import com.back.global.exception.ServiceException;
 import com.back.domain.member.member.entity.Member;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +23,7 @@ public class ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomParticipantService chatRoomParticipantService;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     public ChatRoom getChatRoom(UUID roomId) {
         return chatRoomRepository.findById(roomId)
@@ -47,6 +50,10 @@ public class ChatRoomService {
         }
 
         chatRoom.close();
+
+        // 채팅방 종료 시 Redis 메시지 캐시의 만료 시간(TTL)을 24시간으로 설정
+        String key = "chat:room:" + roomId + ":messages";
+        redisTemplate.expire(key, 24, TimeUnit.HOURS);
 
         return chatRoom;
     }
