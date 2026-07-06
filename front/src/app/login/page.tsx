@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiLogin, apiGetActiveRoom, setTokens, setAdmin, getRoleFromToken, OAUTH_SERVER_BASE, SUSPENDED_STORAGE_KEY } from '@/lib/api';
+import { apiLogin, apiGetActiveRoom, setTokens, setAdmin, getRoleFromToken, OAUTH_SERVER_BASE, SUSPENDED_STORAGE_KEY, sanitizeEmailInput } from '@/lib/api';
 
 const LOGO_CHARS = [
   { c: 'T', color: '#3b7ff2' }, { c: 'a', color: '#ea4c4c' }, { c: 'n', color: '#f5b400' },
@@ -70,7 +70,7 @@ export default function LoginPage() {
         <input
           type="email"
           value={email}
-          onChange={e => setEmail(e.target.value)}
+          onChange={e => setEmail(sanitizeEmailInput(e.target.value))}
           onKeyDown={e => e.key === 'Enter' && handleLogin()}
           placeholder="work@company.com"
           style={{ width: '100%', height: 46, border: '1px solid #dadce0', borderRadius: 8, padding: '0 14px', fontSize: 15, color: '#202124', marginBottom: 16, outline: 'none', boxSizing: 'border-box' }}

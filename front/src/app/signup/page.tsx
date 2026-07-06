@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiSignup, INDUSTRY_CODES } from '@/lib/api';
+import { apiSignup, INDUSTRY_CODES, sanitizeEmailInput } from '@/lib/api';
 
 const INDUSTRIES = [
   { name: 'IT/개발',       color: '#3b7ff2' },
@@ -68,7 +68,7 @@ export default function SignupPage() {
           <input
             type="email"
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={e => setEmail(sanitizeEmailInput(e.target.value))}
             placeholder="work@company.com"
             style={{ width: '100%', height: 46, border: '1px solid #dadce0', borderRadius: 8, padding: '0 14px', fontSize: 15, color: '#202124', outline: 'none', boxSizing: 'border-box' }}
           />

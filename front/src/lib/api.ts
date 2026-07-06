@@ -5,6 +5,9 @@ export const OAUTH_SERVER_BASE = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
 ).replace(/\/$/, "");
 
+// 이메일 입력칸에 한글 등 이메일에 쓸 수 없는 문자가 섞이지 않도록 입력 즉시 걸러냄
+export const sanitizeEmailInput = (value: string) => value.replace(/[^a-zA-Z0-9@._%+-]/g, "");
+
 /* ── Token / admin storage ──────────────────────────────────────── */
 export const getToken = (): string | null =>
   typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
