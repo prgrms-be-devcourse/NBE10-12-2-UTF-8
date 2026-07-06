@@ -18,8 +18,8 @@ import java.util.UUID;
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final OAuthCodeStore oAuthCodeStore;
 
-    @Value("${custom.frontendBaseUrl}")
-    private  String frontendBaseUrl;
+    @Value("${custom.frontendBaseUrl:http://localhost:3000}")
+    private String frontendBaseUrl;
 
     @Override
     public void onAuthenticationSuccess(
