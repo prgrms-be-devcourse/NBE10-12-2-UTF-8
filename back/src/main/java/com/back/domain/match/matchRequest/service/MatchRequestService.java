@@ -182,7 +182,7 @@ public class MatchRequestService {
         List<MatchRequest> pendingList = matchRequestRepository.findAllByStatus(MatchStatus.PENDING);
         for (MatchRequest request : pendingList) {
             try {
-                self().tryMatchInNewTransaction(request.getId());
+                tryMatch(request);
             } catch (Exception e) {
                 log.error("[MatchRequestService] 재시도 중 매칭 실패 - requestId: {}", request.getId(), e);
             }

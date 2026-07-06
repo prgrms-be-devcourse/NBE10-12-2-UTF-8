@@ -26,11 +26,7 @@ public class BotAiClient {
             .requestFactory(createRequestFactory())
             .build();
 
-    private final ObjectMapper objectMapper;
-
-    public BotAiClient(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+    private final ObjectMapper objectMapper =new ObjectMapper();
 
     private static SimpleClientHttpRequestFactory createRequestFactory() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
