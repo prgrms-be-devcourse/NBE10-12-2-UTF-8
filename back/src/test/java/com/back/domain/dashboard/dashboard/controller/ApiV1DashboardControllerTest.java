@@ -28,6 +28,17 @@ public class ApiV1DashboardControllerTest {
     private MemberService memberService;
     @Autowired
     private MockMvc mvc;
+    @Autowired
+    private org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
+
+    @org.junit.jupiter.api.AfterEach
+    void cleanUp() {
+        // 대시보드 캐시 및 매칭 대기열 클린업
+        redisTemplate.delete("dashboard::getDashboard");
+        for (com.back.domain.member.member.entity.Industry ind : com.back.domain.member.member.entity.Industry.values()) {
+            redisTemplate.delete("match:queue:" + ind.name());
+        }
+    }
 
     @Test
     @DisplayName("관리자 대시보드 통계 조회")
@@ -40,7 +51,7 @@ public class ApiV1DashboardControllerTest {
                                         {
                                              "email": "admin@test.com",
                                              "password": "1234"
-                                        }
+                                         }
                                         """)
                 )
                 .andReturn()
@@ -123,7 +134,7 @@ public class ApiV1DashboardControllerTest {
                                         {
                                              "email": "%s",
                                              "password": "1234"
-                                        }
+                                         }
                                         """.formatted(email))
                 )
                 .andReturn()

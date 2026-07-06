@@ -14,6 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -46,6 +47,8 @@ class MatchRequestConcurrencyTest {
     private ChatRoomParticipantRepository chatRoomParticipantRepository;
     @Autowired
     private ChatRoomRepository chatRoomRepository;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     private final List<Member> createdMembers = new ArrayList<>();
 
@@ -56,6 +59,11 @@ class MatchRequestConcurrencyTest {
         chatRoomRepository.deleteAll();
         createdMembers.forEach(memberRepository::delete);
         createdMembers.clear();
+        
+        // Redis 대기열 클린업
+        for (Industry ind : Industry.values()) {
+            redisTemplate.delete("match:queue:" + ind.name());
+        }
     }
 
     // 팀의 3단계 매칭 알고리즘(Tier0/1/2가 elapsed 시간에 따라 후보 범위를 넓힘)을 고려해서,
@@ -64,6 +72,10 @@ class MatchRequestConcurrencyTest {
     private MatchRequest createPendingRequest(Member member, Situation situation, long secondsAgo) {
         MatchRequest matchRequest = matchRequestRepository.save(new MatchRequest(member, situation));
         ReflectionTestUtils.setField(matchRequest, "requestedAt", LocalDateTime.now().minusSeconds(secondsAgo));
+        
+        // Redis 대기열에도 테스트 픽스처 적재
+        redisTemplate.opsForZSet().add("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString(), System.currentTimeMillis() - (secondsAgo * 1000));
+        
         return matchRequestRepository.saveAndFlush(matchRequest);
     }
 

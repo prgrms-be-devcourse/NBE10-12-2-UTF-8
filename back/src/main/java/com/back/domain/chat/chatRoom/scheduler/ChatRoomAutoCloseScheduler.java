@@ -19,7 +19,7 @@ public class ChatRoomAutoCloseScheduler {
     private final ChatRoomRepository chatRoomRepository;
 
     // 1분 간격으로 검사
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "${custom.scheduler.chat-close.cron:0 * * * * *}")
     @Transactional
     public void closeExpiredChatRooms() {
         // 기준 시간: 지금으로부터 10분 전

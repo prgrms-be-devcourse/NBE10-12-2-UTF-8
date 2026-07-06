@@ -1,8 +1,21 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:db_test;MODE=MySQL
+    url: jdbc:h2:mem:db_test;MODE=MySQL;DB_CLOSE_ON_EXIT=FALSE
     username: sa
     password:
     driver-class-name: org.h2.Driver
+  data:
+    redis:
+      host: localhost
+      port: 6379
 custom:
   frontendBaseUrl: http://localhost:3000
+  scheduler:
+    match:
+      retry-delay: "31536000000"
+      cancel-delay: "31536000000"
+      initial-delay: "31536000000"
+    chat-close:
+      cron: "0 0 4 31 12 ?"
+    chat-clean:
+      cron: "0 0 4 31 12 ?"

@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public class ChatMessageCleanupScheduler {
     private final ChatMessageRepository chatMessageRepository;
 
-    @Scheduled(cron = "0 0 * * * *") // 매시 정각
+    @Scheduled(cron = "${custom.scheduler.chat-clean.cron:0 0 * * * *}")
     @Transactional
     public void cleanupExpiredMessages() {
         LocalDateTime threshold = LocalDateTime.now().minusHours(24);

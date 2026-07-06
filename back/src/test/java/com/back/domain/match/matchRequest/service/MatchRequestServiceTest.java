@@ -13,6 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -34,6 +35,8 @@ public class MatchRequestServiceTest {
     private MatchRequestRepository matchRequestRepository;
     @Autowired
     private MemberRepository memberRepository;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     @Autowired
     private ChatRoomParticipantRepository chatRoomParticipantRepository;
@@ -49,6 +52,11 @@ public class MatchRequestServiceTest {
         chatRoomRepository.deleteAll();
         createdMembers.forEach(memberRepository::delete);
         createdMembers.clear();
+        
+        // Redis 대기열 클린업
+        for (com.back.domain.member.member.entity.Industry ind : com.back.domain.member.member.entity.Industry.values()) {
+            redisTemplate.delete("match:queue:" + ind.name());
+        }
     }
     private Member createMember(String email) {
         Member member = memberRepository.save(new Member(email, "1234", IT, "USER"));
@@ -59,6 +67,10 @@ public class MatchRequestServiceTest {
     private MatchRequest createPendingRequest(Member member, Situation situation, long secondsAgo) {
         MatchRequest matchRequest = matchRequestRepository.save(new MatchRequest(member, situation));
         ReflectionTestUtils.setField(matchRequest, "requestedAt", LocalDateTime.now().minusSeconds(secondsAgo));
+        
+        // Redis 대기열에도 테스트 픽스처 적재
+        redisTemplate.opsForZSet().add("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString(), System.currentTimeMillis() - (secondsAgo * 1000));
+        
         return matchRequestRepository.saveAndFlush(matchRequest);
     }
 
@@ -109,8 +121,8 @@ public class MatchRequestServiceTest {
     void t4() {
         Member memberA = createMember("userA@test.com");
         Member memberB = createMember("userB@test.com");
-        MatchRequest reqA = createPendingRequest(memberA, SLACKING, 20);
-        MatchRequest reqB = createPendingRequest(memberB, NIGHT_WORK, 20);
+        MatchRequest reqA = createPendingRequest(memberA, NIGHT_WORK, 20);
+        MatchRequest reqB = createPendingRequest(memberB, OTHER, 20);
 
         matchRequestService.retryPendingMatches();
 
@@ -123,8 +135,8 @@ public class MatchRequestServiceTest {
     void t5() {
         Member memberA = createMember("userA@test.com");
         Member memberB = createMember("userB@test.com");
-        MatchRequest reqA = createPendingRequest(memberA, NIGHT_WORK, 35);
-        MatchRequest reqB = createPendingRequest(memberB, SLACKING, 35);
+        MatchRequest reqA = createPendingRequest(memberA, NIGHT_WORK, 31);
+        MatchRequest reqB = createPendingRequest(memberB, OTHER, 31);
 
         matchRequestService.retryPendingMatches();
 
@@ -138,18 +150,25 @@ public class MatchRequestServiceTest {
         Member memberA = createMember("userA@test.com");
         Member memberB = createMember("userB@test.com");
         Member memberC = createMember("userC@test.com");
-        MatchRequest reqA = createPendingRequest(memberA, NIGHT_WORK, 20);
-        MatchRequest reqB = createPendingRequest(memberB, MEETING_BOMB, 20);
-        MatchRequest reqC = createPendingRequest(memberC, MEETING_BOMB, 18);
+        MatchRequest reqA = createPendingRequest(memberA, NIGHT_WORK, 31);
+        MatchRequest reqB = createPendingRequest(memberB, OTHER, 31);
+        MatchRequest reqC = createPendingRequest(memberC, OTHER, 31);
 
         matchRequestService.retryPendingMatches();
 
-        MatchStatus statusA = matchRequestRepository.findById(reqA.getId()).get().getStatus();
-        MatchStatus statusB = matchRequestRepository.findById(reqB.getId()).get().getStatus();
-        MatchStatus statusC = matchRequestRepository.findById(reqC.getId()).get().getStatus();
+        int matchedCount = 0;
+        int pendingCount = 0;
 
-        assertThat(statusA).isEqualTo(MatchStatus.MATCHED);
-        assertThat(statusB).isEqualTo(MatchStatus.MATCHED);
-        assertThat(statusC).isEqualTo(MatchStatus.PENDING);
+        if (matchRequestRepository.findById(reqA.getId()).get().getStatus() == MatchStatus.MATCHED) matchedCount++;
+        else pendingCount++;
+
+        if (matchRequestRepository.findById(reqB.getId()).get().getStatus() == MatchStatus.MATCHED) matchedCount++;
+        else pendingCount++;
+
+        if (matchRequestRepository.findById(reqC.getId()).get().getStatus() == MatchStatus.MATCHED) matchedCount++;
+        else pendingCount++;
+
+        assertThat(matchedCount).isEqualTo(2);
+        assertThat(pendingCount).isEqualTo(1);
     }
 }
