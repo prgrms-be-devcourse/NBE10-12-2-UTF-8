@@ -10,6 +10,7 @@ import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.match.matchRequest.repository.MatchRequestRepository;
 import com.back.domain.member.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ public class DashboardService {
     private static final int RECENT_MATCH_FETCH_BATCH_SIZE = 20;
 
 
+    @Cacheable(value = "dashboard", key = "'getDashboard'")
     public DashboardResponseDto getDashboard() {
         long totalMembers = memberRepository.count();
         long todayMatches = matchRequestRepository.countTodayMatches(
