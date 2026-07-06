@@ -220,6 +220,7 @@ public class MatchRequestService {
         return matchRequestRepository.findByMemberAndRoomStatus(member, ChatRoomStatus.CLOSED);
     }
 
+    @Transactional(readOnly = true)
     public List<SituationStatisticsDto> getSituationStatistics() {
         return matchRequestRepository.countActiveBySituation(MatchStatus.MATCHED, ChatRoomStatus.ACTIVE);
     }
