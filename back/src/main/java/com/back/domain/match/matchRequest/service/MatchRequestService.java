@@ -16,8 +16,10 @@ import com.back.domain.member.member.repository.MemberRepository;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
@@ -36,6 +38,11 @@ public class MatchRequestService {
     private final MemberRepository memberRepository;
     private final ChatRoomService chatRoomService;
     private final ApplicationEventPublisher eventPublisher;
+    private final ApplicationContext applicationContext;
+
+    private MatchRequestService self() {
+        return applicationContext.getBean(MatchRequestService.class);
+    }
 
     private static final long TIER1_THRESHOLD_SECONDS = 15; // 15초 후 유사 상황 매칭
     private static final long TIER2_THRESHOLD_SECONDS = 30; // 30초 후 산업군 전체 매칭
@@ -163,11 +170,22 @@ public class MatchRequestService {
         }
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void tryMatchInNewTransaction(UUID matchRequestId) {
+        MatchRequest matchRequest = matchRequestRepository.findById(matchRequestId)
+                .orElseThrow(() -> new ServiceException("404-1", "매칭 요청을 찾을 수 없습니다."));
+        tryMatch(matchRequest);
+    }
+
     @Transactional
     public void retryPendingMatches() {
         List<MatchRequest> pendingList = matchRequestRepository.findAllByStatus(MatchStatus.PENDING);
         for (MatchRequest request : pendingList) {
-            tryMatch(request);
+            try {
+                self().tryMatchInNewTransaction(request.getId());
+            } catch (Exception e) {
+                log.error("[MatchRequestService] 재시도 중 매칭 실패 - requestId: {}", request.getId(), e);
+            }
         }
     }
 

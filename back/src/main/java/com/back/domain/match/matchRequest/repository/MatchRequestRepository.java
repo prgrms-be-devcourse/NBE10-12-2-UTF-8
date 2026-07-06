@@ -62,7 +62,7 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
     // CAS(WHERE status='PENDING') 조건 자체가 동시성 안전장치 역할을 한다.
     // MatchRequestRepository.java
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query(value = "UPDATE match_request SET status = 'MATCHED', modified_at = CURRENT_TIMESTAMP " +
+    @Query(value = "UPDATE match_request SET status = 'MATCHED', version = version + 1, modified_at = CURRENT_TIMESTAMP " +
             "WHERE id = :id AND status = 'PENDING'", nativeQuery = true)
     int claimPending(@Param("id") UUID id);
 
@@ -71,7 +71,7 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
     void assignRoom(@Param("id") UUID id, @Param("roomId") UUID roomId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query(value = "UPDATE match_request SET status = 'PENDING' WHERE id = :id", nativeQuery = true)
+    @Query(value = "UPDATE match_request SET status = 'PENDING', version = version + 1 WHERE id = :id", nativeQuery = true)
     void revertToPending(@Param("id") UUID id);
 
     // 매칭 성사 시 양쪽 MatchRequest가 거의 동시에 modifiedAt이 갱신되므로,

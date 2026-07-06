@@ -26,13 +26,18 @@ public class BotAiClient {
             .requestFactory(createRequestFactory())
             .build();
 
+    private final ObjectMapper objectMapper;
+
+    public BotAiClient(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
     private static SimpleClientHttpRequestFactory createRequestFactory() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(CONNECT_TIMEOUT_MS);
         factory.setReadTimeout(READ_TIMEOUT_MS);
         return factory;
     }
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${custom.bot.groq-api-key:}")
     private String apiKey;
