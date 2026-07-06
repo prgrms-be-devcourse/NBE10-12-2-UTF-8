@@ -23,6 +23,9 @@ export const setAdmin = () => localStorage.setItem("isAdmin", "1");
 export const isAdmin = () =>
   typeof window !== "undefined" && localStorage.getItem("isAdmin") === "1";
 
+// 정지된 계정으로 로그인 시 /me 페이지에 정지 안내를 띄우기 위한 1회성 플래그 키
+export const SUSPENDED_STORAGE_KEY = "tangbisil_suspended";
+
 // JWT의 role 클레임을 읽어 관리자 여부를 판별 (백엔드는 별도의 /me role 필드를 내려주지 않음)
 export const getRoleFromToken = (token: string): string | null => {
   try {

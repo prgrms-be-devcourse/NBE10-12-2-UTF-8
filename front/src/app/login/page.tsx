@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiLogin, apiGetActiveRoom, setTokens, setAdmin, getRoleFromToken, OAUTH_SERVER_BASE } from '@/lib/api';
+import { apiLogin, apiGetActiveRoom, setTokens, setAdmin, getRoleFromToken, OAUTH_SERVER_BASE, SUSPENDED_STORAGE_KEY } from '@/lib/api';
 
 const LOGO_CHARS = [
   { c: 'T', color: '#3b7ff2' }, { c: 'a', color: '#ea4c4c' }, { c: 'n', color: '#f5b400' },
@@ -43,7 +43,7 @@ export default function LoginPage() {
         await apiGetActiveRoom();
       } catch (checkErr: unknown) {
         if ((checkErr as { status?: number })?.status === 403) {
-          localStorage.setItem('tangbisil_suspended', '1');
+          localStorage.setItem(SUSPENDED_STORAGE_KEY, '1');
           router.replace('/me');
           return;
         }
