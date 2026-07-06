@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
   apiGetRoom, apiCloseRoom, apiSendMessage, apiGetMessages, apiGetMe, apiSubmitReport,
-  getToken, INDUSTRY_NAMES, type ChatMsg,
+  apiGetHomeStats, getToken, INDUSTRY_NAMES, type ChatMsg,
 } from '@/lib/api';
 import { AppShell } from '@/components/AppShell';
 import { TangbisilLogo } from '@/components/TangbisilLogo';
@@ -67,6 +67,7 @@ export default function ChatPage() {
   const [userIndustry, setUserIndustry] = useState('');
   const [partnerLeft, setPartnerLeft]   = useState(false);
   const [chatExpired, setChatExpired]   = useState(false);
+  const [totalActiveUsers, setTotalActiveUsers] = useState(0);
 
   const [reportTarget, setReportTarget]           = useState<ChatMsg | null>(null);
   const [reportReason, setReportReason]           = useState('');
@@ -185,6 +186,14 @@ export default function ChatPage() {
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
+  useEffect(() => {
+    apiGetHomeStats()
+      .then(stats => setTotalActiveUsers(stats.totalActiveUsers))
+      .catch((err) => {
+        console.error('Failed to fetch home stats:', err);
+      });
+  }, []);
+
   const handleReport = async () => {
     if (!reportTarget || !reportReason) return;
     setReportSubmitting(true);
@@ -253,7 +262,7 @@ export default function ChatPage() {
               {situation}
             </span>
           )}
-          <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#9aa0a6', flexShrink: 0 }}>지금 13,590명 활동 중</span>
+          <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#9aa0a6', flexShrink: 0 }}>지금 {totalActiveUsers.toLocaleString()}명 활동 중</span>
         </div>
 
         <div style={{ padding: '12px 18px 14px' }}>
