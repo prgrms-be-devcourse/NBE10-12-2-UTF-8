@@ -1,13 +1,13 @@
 package com.back.domain.member.member.controller;
 import com.back.domain.match.matchRequest.dto.MatchHistoryDto;
 import com.back.domain.member.member.dto.MemberDto;
+import com.back.domain.member.member.dto.OAuthExchangeResult;
 import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.service.MemberService;
 import com.back.global.exception.ServiceException;
 import com.back.global.rq.Rq;
 import com.back.global.rsData.RsData;
-import com.back.global.security.oauth.OAuthCodeStore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,9 +33,10 @@ import java.util.UUID;
 public class ApiV1MemberController {
     private final MemberService memberService;
     private final Rq rq;
-    private final OAuthCodeStore oAuthCodeStore;
     @Value("${custom.accessToken.expirationSeconds}")
     private int accessTokenExpirationSeconds;
+    @Value("${custom.refreshToken.expirationSeconds}")
+    private int refreshTokenExpirationSeconds;
 
     public record MemberSignupReq(
             @NotBlank
@@ -104,7 +105,7 @@ public class ApiV1MemberController {
         rq.setCookie(
                 "refreshToken",
                 refreshToken.toString(),
-                60 * 60 * 24 * 30
+                refreshTokenExpirationSeconds
         );
         return new RsData<>(
                 "200-1",
@@ -121,31 +122,22 @@ public class ApiV1MemberController {
     @PostMapping("/oauth/exchange")
     @Operation(summary = "소셜 로그인 code 교환")
     public RsData<OAuthExchangeRes> oauthExchange(@Valid @RequestBody OAuthLoginReq req) {
-        UUID memberId = oAuthCodeStore.consume(req.code());
+        OAuthExchangeResult result = memberService.exchangeOAuthCode(req.code());
 
-        Member member = memberService.findById(memberId)
-                .orElseThrow(()-> new ServiceException("404-1","존재하지 않는 회원입니다."));
-
-        String accessToken = memberService.genAccessToken(member);
-        UUID refreshToken = memberService.genRefreshToken(member);
-
-        rq.setCookie("accessToken", accessToken, accessTokenExpirationSeconds);
-        rq.setCookie("refreshToken", refreshToken.toString(), 60 * 60 * 24 * 30);
-
-        boolean needsOnboarding = member.getIndustry() == null;
+        rq.setCookie("accessToken", result.accessToken(), accessTokenExpirationSeconds);
+        rq.setCookie("refreshToken", result.refreshToken().toString(), refreshTokenExpirationSeconds);
 
         return new RsData<>(
                 "200-1",
                 "소셜 로그인 성공",
                 new OAuthExchangeRes(
                         "Bearer",
-                        accessToken,
-                        refreshToken.toString(),
+                        result.accessToken(),
+                        result.refreshToken().toString(),
                         accessTokenExpirationSeconds,
-                        needsOnboarding
+                        result.needsOnboarding()
                 )
         );
-
     }
 
     @PostMapping("/logout")
