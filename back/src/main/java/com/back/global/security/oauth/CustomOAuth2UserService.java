@@ -2,6 +2,9 @@ package com.back.global.security.oauth;
 
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.service.MemberService;
+import com.back.global.security.oauth.userinfo.GoogleUserInfo;
+import com.back.global.security.oauth.userinfo.KakaoUserInfo;
+import com.back.global.security.oauth.userinfo.OAuth2UserInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
