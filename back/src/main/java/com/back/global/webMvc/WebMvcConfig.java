@@ -10,7 +10,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry
                 .addMapping("/api/**")
-                .allowedOrigins("https://cdpn.io", "http://localhost:3000", "https://frontend-production-00f68.up.railway.app")
+                .allowedOrigins("https://cdpn.io", "http://localhost:3000", "https://tangbisil-production.up.railway.app")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH")
                 .allowedHeaders("*")
                 .allowCredentials(true);
