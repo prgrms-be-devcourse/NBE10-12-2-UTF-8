@@ -8,6 +8,7 @@ import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -57,18 +58,18 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
     // 동시성 문제의 안전장치: PENDING 상태일 때만 MATCHED로 바꾸는 원자적(compare-and-swap) 업데이트.
     // 두 트랜잭션이 같은 row를 동시에 노려도 DB가 UPDATE 문을 순서대로 처리해줘서,
     // 딱 한쪽만 1(성공)을 받고 나머지는 0(이미 남이 채감)을 받는다.
-    @org.springframework.data.jpa.repository.Modifying
+    @Modifying(clearAutomatically = true)
     @Query(value = "UPDATE match_request SET status = 'MATCHED', modified_at = CURRENT_TIMESTAMP " +
             "WHERE id = :id AND status = 'PENDING'", nativeQuery = true)
     int claimPending(@Param("id") UUID id);
 
-    @org.springframework.data.jpa.repository.Modifying
+    @Modifying(clearAutomatically = true)
     @Query(value = "UPDATE match_request SET room_id = :roomId WHERE id = :id", nativeQuery = true)
     void assignRoom(@Param("id") UUID id, @Param("roomId") UUID roomId);
 
     // 둘 중 하나만 선점 성공하고 나머지가 실패했을 때, 성공한 쪽을 다시 PENDING으로 되돌리는 보정 동작.
     // 이게 없으면 "선점은 됐는데 방은 없는" 상태로 영구히 남을 수 있다.
-    @org.springframework.data.jpa.repository.Modifying
+    @Modifying(clearAutomatically = true)
     @Query(value = "UPDATE match_request SET status = 'PENDING' WHERE id = :id", nativeQuery = true)
     void revertToPending(@Param("id") UUID id);
 

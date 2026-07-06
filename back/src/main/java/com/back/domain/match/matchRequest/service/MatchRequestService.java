@@ -83,6 +83,8 @@ public class MatchRequestService {
         // claimPending/assignRoom은 벌크 UPDATE라 영속성 컨텍스트를 안 거친다.
         // retryPendingMatches()의 반복문이 같은 엔티티 인스턴스를 재사용하며 상태를 확인하므로,
         // 자바 객체 필드도 반드시 맞춰줘야 한다 (안 그러면 이미 매칭된 요청을 또 매칭 시도함).
+        // (clearAutomatically=true라 이 시점 matchRequest/other는 영속성 컨텍스트에서 detached 상태.
+        //  matchWith()는 DB 반영용이 아니라 같은 트랜잭션 내 로컬 필드 동기화 목적일 뿐이다.)
         matchRequest.matchWith(chatRoom);
         other.matchWith(chatRoom);
 

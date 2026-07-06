@@ -14,11 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import java.util.AbstractMap;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Slf4j
 @Service
@@ -42,7 +39,7 @@ public class BotReplyService {
             Member bot = memberRepository.findById(event.botMemberId())
                     .orElseThrow(() -> new IllegalStateException("봇 계정을 찾을 수 없습니다: " + event.botMemberId()));
 
-            Thread.sleep(MIN_DELAY_MS + new Random().nextInt(MAX_EXTRA_DELAY_MS));
+            Thread.sleep(MIN_DELAY_MS + ThreadLocalRandom.current().nextInt(MAX_EXTRA_DELAY_MS));
 
             String reply = generateReply(event.roomId(), bot);
             if (reply == null || reply.isBlank()) {
@@ -107,6 +104,7 @@ public class BotReplyService {
 
         String systemInstruction = """
 당신은 '탕비실'이라는 익명 직장인 채팅 서비스의 대화 상대입니다.
+상대방은 %s 업종에서 일하는 직장인입니다.
 
 규칙:
 - 마지막 사용자 메시지에만 답변하세요.
@@ -146,7 +144,6 @@ public class BotReplyService {
 절대로 과도하게 공감하지 마세요.
 절대로 본인 경험을 말하지 마세요.
 """.formatted(industry != null ? industry.getLabel() : "일반 사무직");
-
         conversation.forEach(c ->
                 log.debug("{} : {}", c.getKey() ? "BOT" : "USER", c.getValue())
         );
