@@ -1,5 +1,6 @@
 package com.back.global.security.oauth;
 
+import com.back.global.exception.ServiceException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -30,7 +31,7 @@ public class OAuthCodeStore {
     public UUID consume(String code) {
         CodeEntry entry = store.remove(code);
         if (entry == null || entry.isExpired()) {
-            throw new IllegalArgumentException("유효하지 않거나 이미 사용된 code입니다.");
+            throw new ServiceException("400-1", "유효하지 않거나 이미 사용된 code입니다.");
         }
         return entry.memberId();
     }
