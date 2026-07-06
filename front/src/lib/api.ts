@@ -166,6 +166,15 @@ export const apiGetMatch = (matchRequestId: string) =>
 export const apiCancelMatch = (matchRequestId: string) =>
   req<null>(`/api/v1/matches/${matchRequestId}`, { method: "DELETE" });
 
+export type HomeStats = {
+  totalActiveUsers: number;
+  situationStats: Array<{ situation: string; count: number }>;
+};
+
+// 홈 화면 실시간 통계(총 이용자 수 + 상황별 대화 인원) — 비로그인 사용자도 호출 가능
+export const apiGetHomeStats = () =>
+  req<HomeStats>("/api/v1/matches/stats/home");
+
 /* ── Chat ───────────────────────────────────────────────────────── */
 export type ChatRoom = {
   roomId: string;

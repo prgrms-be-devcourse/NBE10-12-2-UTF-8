@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   apiCreateMatch, apiGetMatch, apiGetActiveRoom,
-  apiGetMe, getToken, INDUSTRY_NAMES,
+  apiGetMe, apiGetHomeStats, getToken, INDUSTRY_NAMES,
 } from '@/lib/api';
 import { AppShell } from '@/components/AppShell';
 import { TangbisilLogo } from '@/components/TangbisilLogo';
@@ -14,15 +14,15 @@ const MATCH_KEY   = 'tangbisil_match';
 const TIMEOUT_KEY = 'tangbisil_match_timeout';
 
 const TOPICS = [
-  { label: '야근 중',        count: '3.2천' },
-  { label: '회의 폭탄',      count: '2.1천' },
-  { label: '사내 연애 폭로',  count: '1.8천' },
-  { label: '상사 억까',      count: '2.6천' },
-  { label: '사내 정치 피로',  count: '1.4천' },
-  { label: '이직 마려움',    count: '2.9천' },
-  { label: '연봉 협상 앞둠',  count: '980'  },
-  { label: '몰래 루팡중',    count: '1.7천' },
-  { label: '기타',            count: '540'  },
+  { label: '야근 중' },
+  { label: '회의 폭탄' },
+  { label: '사내 연애 폭로' },
+  { label: '상사 억까' },
+  { label: '사내 정치 피로' },
+  { label: '이직 마려움' },
+  { label: '연봉 협상 앞둠' },
+  { label: '몰래 루팡중' },
+  { label: '기타' },
 ];
 
 function SearchIcon({ onClick }: { onClick?: () => void }) {
@@ -73,6 +73,19 @@ export default function HomePage() {
   const [userIndustry, setUserIndustry]   = useState('');
   const [matchError, setMatchError]       = useState('');
   const [showTimeout, setShowTimeout]     = useState(false);
+  const [totalActiveUsers, setTotalActiveUsers] = useState(0);
+  const [situationCounts, setSituationCounts]   = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    apiGetHomeStats()
+      .then(stats => {
+        setTotalActiveUsers(stats.totalActiveUsers);
+        setSituationCounts(
+          Object.fromEntries(stats.situationStats.map(s => [s.situation, s.count])),
+        );
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const timeoutFlag = localStorage.getItem(TIMEOUT_KEY);
@@ -207,7 +220,7 @@ export default function HomePage() {
               {userIndustry && (
                 <span style={{ fontSize: 11, color: '#bdc1c6' }}>가입 시 선택한 업계로 고정</span>
               )}
-              <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#9aa0a6', flexShrink: 0 }}>지금 13,590명 활동 중</span>
+              <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#9aa0a6', flexShrink: 0 }}>지금 {totalActiveUsers.toLocaleString()}명 활동 중</span>
             </div>
 
             <div style={{ padding: '12px 18px' }}>
@@ -225,7 +238,7 @@ export default function HomePage() {
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: active ? '#e8f0fe' : '#f8f9fa', border: `1px solid ${active ? '#3b7ff2' : '#e8eaed'}`, borderRadius: 16, fontSize: 13, color: active ? '#3b7ff2' : '#3c4043', fontWeight: active ? 600 : 400, cursor: 'pointer' }}
                     >
                       {t.label}
-                      <span style={{ color: '#80868b', fontSize: 11.5 }}>{t.count}</span>
+                      <span style={{ color: '#80868b', fontSize: 11.5 }}>{(situationCounts[t.label] ?? 0).toLocaleString()}</span>
                     </span>
                   );
                 })}
