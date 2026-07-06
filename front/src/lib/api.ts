@@ -1,3 +1,5 @@
+import isEmail from "validator/lib/isEmail";
+
 const BASE = "";
 
 // 백엔드가 직접 처리하는 OAuth2 인가 엔드포인트(풀 리다이렉트용) — /api 프록시 대상이 아니라 백엔드 origin이 그대로 필요함
@@ -5,10 +7,9 @@ export const OAUTH_SERVER_BASE = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
 ).replace(/\/$/, "");
 
-// 이메일 형식 검증 — 허용 문자를 명시적으로 나열해야 한글 등이 섞인 값을 걸러낼 수 있음
-// (`[^\s@]`처럼 부정 문자 클래스만 쓰면 공백/@ 만 아니면 한글도 통과해버림)
-export const isValidEmail = (value: string) =>
-  /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value);
+// 이메일 형식 검증 — 직접 만든 정규식은 허용 문자를 빠뜨리기 쉬워서(예: [^\s@]류 부정 클래스는
+// 한글도 통과시켜버림) validator 라이브러리의 검증 로직을 그대로 사용함
+export const isValidEmail = (value: string) => isEmail(value);
 
 /* ── Token / admin storage ──────────────────────────────────────── */
 export const getToken = (): string | null =>
