@@ -12,6 +12,7 @@ import com.back.global.exception.ServiceException;
 import com.back.global.rq.Rq;
 import com.back.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -84,7 +85,9 @@ public class ApiV1MatchController {
     }
 
     public record HomeStatsRes(
+            @Schema(description = "현재 대화 중인 전체 인원 수 (상황별 인원의 합)")
             long totalActiveUsers,
+            @Schema(description = "상황별 현재 대화 중인 인원 통계 목록")
             List<SituationStatisticsDto> situationStats
     ) {}
 
