@@ -5,6 +5,7 @@ import com.back.domain.bot.BotReplyTriggerEvent;
 import com.back.domain.chat.chatRoom.entity.ChatRoom;
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.chat.chatRoom.service.ChatRoomService;
+import com.back.domain.match.matchRequest.dto.SituationStatisticsDto;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.match.matchRequest.entity.Situation;
@@ -217,5 +218,9 @@ public class MatchRequestService {
 
     public List<MatchRequest> findMatchHistoryByMember(Member member) {
         return matchRequestRepository.findByMemberAndRoomStatus(member, ChatRoomStatus.CLOSED);
+    }
+
+    public List<SituationStatisticsDto> getSituationStatistics() {
+        return matchRequestRepository.countActiveBySituation(MatchStatus.MATCHED, ChatRoomStatus.ACTIVE);
     }
 }

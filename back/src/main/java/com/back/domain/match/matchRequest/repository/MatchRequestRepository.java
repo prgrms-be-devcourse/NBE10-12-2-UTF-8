@@ -1,6 +1,7 @@
 package com.back.domain.match.matchRequest.repository;
 
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
+import com.back.domain.match.matchRequest.dto.SituationStatisticsDto;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.match.matchRequest.entity.Situation;
@@ -53,7 +54,15 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
     List<MatchRequest> findPendingByIndustry(
             @Param("industry") Industry industry,
             @Param("status") MatchStatus status);
-
+    @Query("""
+         SELECT new com.back.domain.match.matchRequest.dto.SituationStatisticsDto(r.situation, COUNT(r))
+         FROM MatchRequest r
+         WHERE r.status = :status AND r.room.status = :roomStatus
+         GROUP BY r.situation
+         """)
+    List<SituationStatisticsDto> countActiveBySituation(
+            @Param("status") MatchStatus status,
+            @Param("roomStatus") ChatRoomStatus roomStatus);
     // retryPendingMatches의 재시도 대상 조회 - member까지 즉시 로딩해서
     // REQUIRES_NEW로 트랜잭션이 분리되는 재시도 처리 도중 지연 로딩 프록시가
     // 세션 없이 초기화되는 LazyInitializationException을 방지한다.

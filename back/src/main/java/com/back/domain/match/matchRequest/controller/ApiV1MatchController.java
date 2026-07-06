@@ -2,6 +2,7 @@ package com.back.domain.match.matchRequest.controller;
 
 import com.back.domain.match.matchRequest.dto.MatchRequestDto;
 import com.back.domain.match.matchRequest.dto.MatchResponseDto;
+import com.back.domain.match.matchRequest.dto.SituationStatisticsDto;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.match.matchRequest.service.MatchRequestService;
@@ -16,6 +17,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -81,7 +83,25 @@ public class ApiV1MatchController {
         );
     }
 
+    public record HomeStatsRes(
+            long totalActiveUsers,
+            List<SituationStatisticsDto> situationStats
+    ) {}
 
+    @GetMapping("/stats/home")
+    @Operation(summary = "홈 화면 실시간 통계 조회")
+    public RsData<HomeStatsRes> getHomeStats() {
+        List<SituationStatisticsDto> situationStats = matchRequestService.getSituationStatistics();
+        long totalActiveUsers = situationStats.stream()
+                .mapToLong(SituationStatisticsDto::count)
+                .sum();
+
+        return new RsData<>(
+                "200-1",
+                "홈 화면 통계 조회 성공",
+                new HomeStatsRes(totalActiveUsers, situationStats)
+        );
+    }
 
 }
 
