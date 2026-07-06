@@ -149,8 +149,8 @@ public class MatchRequestService {
 
         List<MatchRequest> candidates = findCandidates(industry, situation, elapsedSeconds);
         Optional<MatchRequest> opponent = candidates.stream()
-                .filter(r -> !r.equals(matchRequest))
-                .filter(r -> !BotAccounts.isBotEmail(r.getMember().getEmail())) // 봇은 평소 대기열에 없지만 방어적으로 제외
+                .filter(r -> !r.getId().equals(matchRequest.getId()))
+                .filter(r -> !BotAccounts.isBotEmail(r.getMember().getEmail()))
                 .findFirst();
 
         if (opponent.isPresent()) {
