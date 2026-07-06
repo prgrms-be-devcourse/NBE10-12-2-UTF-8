@@ -73,9 +73,11 @@ export default function SignupPage() {
             placeholder="work@company.com"
             style={{ width: '100%', height: 46, border: '1px solid #dadce0', borderRadius: 8, padding: '0 14px', fontSize: 15, color: '#202124', outline: 'none', boxSizing: 'border-box' }}
           />
-          <div style={{ fontSize: 11.5, color: emailOk ? '#34a06b' : '#9aa0a6', marginTop: 6 }}>
-            {emailOk ? '✓ 사용 가능한 이메일 형식이에요' : '올바른 이메일 형식으로 입력해주세요 (예: work@company.com)'}
-          </div>
+          {email && (
+            <div style={{ fontSize: 11.5, color: emailOk ? '#34a06b' : '#9aa0a6', marginTop: 6 }}>
+              {emailOk ? '✓ 사용 가능한 이메일 형식이에요' : '올바른 이메일 형식으로 입력해주세요 (예: work@company.com)'}
+            </div>
+          )}
         </div>
 
         {/* Password row */}
