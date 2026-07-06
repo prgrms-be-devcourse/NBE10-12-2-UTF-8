@@ -19,6 +19,12 @@ function OAuthCallbackInner() {
   const hasFetched = useRef(false);
 
   useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setError(`인증 실패: ${searchParams.get('error_description') || errorParam}`);
+      return;
+    }
+
     const code = searchParams.get('code');
     if (!code) {
       setError('로그인 코드가 없어요');

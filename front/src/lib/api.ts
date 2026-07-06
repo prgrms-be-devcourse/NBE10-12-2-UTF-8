@@ -1,8 +1,9 @@
 const BASE = "";
 
 // 백엔드가 직접 처리하는 OAuth2 인가 엔드포인트(풀 리다이렉트용) — /api 프록시 대상이 아니라 백엔드 origin이 그대로 필요함
-export const OAUTH_SERVER_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+export const OAUTH_SERVER_BASE = (
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+).replace(/\/$/, "");
 
 /* ── Token / admin storage ──────────────────────────────────────── */
 export const getToken = (): string | null =>
