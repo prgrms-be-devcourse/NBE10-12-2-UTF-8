@@ -57,13 +57,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
-      <TangbisilLogo size={42} />
-      <div style={{ fontSize: 14, color: '#5f6368', marginBottom: 26, marginTop: 8 }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff', fontFamily: "Arial, 'Helvetica Neue', sans-serif", padding: '24px 16px', boxSizing: 'border-box' }}>
+      <Link href="/" style={{ textDecoration: 'none' }}><TangbisilLogo size={42} /></Link>
+      <div style={{ fontSize: 14, color: '#5f6368', marginBottom: 26, marginTop: 8, textAlign: 'center' }}>
         검색하듯 로그인하고, 익명으로 동료와 연결되세요
       </div>
 
-      <div style={{ width: 400, border: '1px solid #dadce0', borderRadius: 14, padding: '30px 30px 26px' }}>
+      <div style={{ width: '100%', maxWidth: 400, border: '1px solid #dadce0', borderRadius: 14, padding: '30px 24px 26px', boxSizing: 'border-box' }}>
         <div style={{ fontSize: 20, color: '#202124', fontWeight: 500, marginBottom: 22 }}>로그인</div>
 
         <div style={{ fontSize: 12, color: '#5f6368', marginBottom: 6 }}>이메일</div>
@@ -137,7 +137,6 @@ export default function LoginPage() {
           카카오로 계속하기
         </a>
       </div>
-
     </div>
   );
 }

@@ -209,11 +209,11 @@ export default function ChatPage() {
   const displayMessages = [...messages].reverse();
 
   const s = {
-    card: { width: 560, background: '#fff', borderRadius: 24, boxShadow: '0 1px 10px rgba(32,33,36,.18)', marginTop: 20 } as const,
+    card: { width: '100%', maxWidth: 560, background: '#fff', borderRadius: 24, boxShadow: '0 1px 10px rgba(32,33,36,.18)', marginTop: 20, boxSizing: 'border-box' } as const,
     searchRow: { height: 46, display: 'flex', alignItems: 'center', gap: 13, padding: '0 16px' } as const,
     sep: { height: 1, background: '#e8eaed', margin: '0 14px' } as const,
-    industryRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '6px 18px', borderBottom: '1px solid #e8eaed' } as const,
-    hintRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 18px' } as const,
+    industryRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, padding: '6px 18px', borderBottom: '1px solid #e8eaed' } as const,
+    hintRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 4, padding: '9px 18px' } as const,
     hintText: { fontSize: 11, color: '#bdc1c6' } as const,
   };
 
@@ -332,11 +332,11 @@ export default function ChatPage() {
       {reportTarget && (
         <div
           onClick={closeReportModal}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16, boxSizing: 'border-box' }}
         >
           <div
             onClick={e => e.stopPropagation()}
-            style={{ background: '#fff', borderRadius: 16, padding: '26px 28px', width: 380, boxShadow: '0 4px 24px rgba(0,0,0,.18)' }}
+            style={{ background: '#fff', borderRadius: 16, padding: '26px 28px', width: '100%', maxWidth: 380, boxSizing: 'border-box', boxShadow: '0 4px 24px rgba(0,0,0,.18)' }}
           >
             {reportDone ? (
               <>
