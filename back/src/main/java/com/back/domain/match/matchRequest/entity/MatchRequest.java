@@ -14,8 +14,7 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor
 @Table(name = "match_request", indexes = {
-        @Index(name = "idx_match_request_status", columnList = "status"),
-        @Index(name = "idx_match_request_room_id", columnList = "room_id")
+        @Index(name = "idx_match_request_status_room_id", columnList = "status, room_id")
 })
 public class MatchRequest extends BaseEntity {
 
