@@ -12,8 +12,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -132,8 +130,8 @@ public class BotReplyExecutor {
         log.warn("AI 실패 -> 폴백 메시지 사용");
 
         // AI 호출 실패/키 미설정 시 캔드 메시지로 폴백
-        List<String> lines = new ArrayList<>(BotReplyMessages.LINES);
-        Collections.shuffle(lines);
-        return lines.get(0);
+        List<String> lines = BotReplyMessages.LINES;
+        int randomIndex = java.util.concurrent.ThreadLocalRandom.current().nextInt(lines.size());
+        return lines.get(randomIndex);
     }
 }

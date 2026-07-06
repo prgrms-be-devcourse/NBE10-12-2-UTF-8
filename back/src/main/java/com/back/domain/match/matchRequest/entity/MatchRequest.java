@@ -41,7 +41,7 @@ public class MatchRequest extends BaseEntity {
     // 실제 동시성 방어는 claimPending의 CAS(WHERE status='PENDING')가 전담하고,
     // 이 필드는 향후 일반 save() 경로로 MatchRequest를 수정하는 코드가 생길 때를 대비한 안전장치다.
     @Version
-    private Long version;
+    private Long version =0L;
     
     public MatchRequest(Member member, Situation situation) {
         this.member = member;

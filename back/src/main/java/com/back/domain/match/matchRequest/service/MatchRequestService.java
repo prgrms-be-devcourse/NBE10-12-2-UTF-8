@@ -16,10 +16,8 @@ import com.back.domain.member.member.repository.MemberRepository;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
@@ -38,11 +36,6 @@ public class MatchRequestService {
     private final MemberRepository memberRepository;
     private final ChatRoomService chatRoomService;
     private final ApplicationEventPublisher eventPublisher;
-    private final ApplicationContext applicationContext;
-
-    private MatchRequestService self() {
-        return applicationContext.getBean(MatchRequestService.class);
-    }
 
     private static final long TIER1_THRESHOLD_SECONDS = 15; // 15초 후 유사 상황 매칭
     private static final long TIER2_THRESHOLD_SECONDS = 30; // 30초 후 산업군 전체 매칭
@@ -180,6 +173,10 @@ public class MatchRequestService {
 
     @Transactional
     public void retryPendingMatches() {
+        // TODO: 이 메서드는 단일 트랜잭션이라 루프 중 예외 발생 시
+        // 이미 성공한 다른 매칭 변경사항까지 rollback-only로 롤백될 수 있음.
+        // REQUIRES_NEW로 분리 시도했으나 테스트의 @Transactional 격리 범위 밖
+        // 조회 문제로 회귀 발생(2026-07-06) - 테스트 구조 개선과 함께 재작업 필요.
         List<MatchRequest> pendingList = matchRequestRepository.findAllByStatus(MatchStatus.PENDING);
         for (MatchRequest request : pendingList) {
             try {
