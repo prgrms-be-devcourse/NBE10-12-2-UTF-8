@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiLogin, apiGetActiveRoom, setTokens, setAdmin, getRoleFromToken, OAUTH_SERVER_BASE, SUSPENDED_STORAGE_KEY } from '@/lib/api';
+import { apiLogin, apiGetActiveRoom, setTokens, setAdmin, getRoleFromToken, OAUTH_SERVER_BASE, SUSPENDED_STORAGE_KEY, isValidEmail } from '@/lib/api';
 
 const LOGO_CHARS = [
   { c: 'T', color: '#3b7ff2' }, { c: 'a', color: '#ea4c4c' }, { c: 'n', color: '#f5b400' },
@@ -29,6 +29,10 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     if (!email || !password) return;
+    if (!isValidEmail(email)) {
+      setError('올바른 이메일 형식이 아니에요');
+      return;
+    }
     setError('');
     setLoading(true);
     try {

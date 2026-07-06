@@ -5,6 +5,11 @@ export const OAUTH_SERVER_BASE = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
 ).replace(/\/$/, "");
 
+// 이메일 형식 검증 — 허용 문자를 명시적으로 나열해야 한글 등이 섞인 값을 걸러낼 수 있음
+// (`[^\s@]`처럼 부정 문자 클래스만 쓰면 공백/@ 만 아니면 한글도 통과해버림)
+export const isValidEmail = (value: string) =>
+  /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value);
+
 /* ── Token / admin storage ──────────────────────────────────────── */
 export const getToken = (): string | null =>
   typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
