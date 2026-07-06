@@ -54,7 +54,12 @@ public class MatchRequestService {
         }
 
         List<UUID> uuids = pendingIds.stream().map(UUID::fromString).toList();
-        List<MatchRequest> pendingRequests = matchRequestRepository.findAllById(uuids);
+        List<MatchRequest> pendingRequestsRaw = matchRequestRepository.findAllById(uuids);
+        // DB 조회 결과의 정렬 유실을 방지하고 Redis ZSET 대기열 순서(FIFO)를 그대로 보존
+        List<MatchRequest> pendingRequests = uuids.stream()
+                .map(uuid -> pendingRequestsRaw.stream().filter(r -> r.getId().equals(uuid)).findFirst().orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .toList();
 
         if (elapsedSeconds < TIER1_THRESHOLD_SECONDS) {
             return pendingRequests.stream()
@@ -87,9 +92,21 @@ public class MatchRequestService {
             return;
         }
 
-        // 매칭 성공 시 Redis 대기열에서 즉시 제외
-        redisTemplate.opsForZSet().remove("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString());
-        redisTemplate.opsForZSet().remove("match:queue:" + other.getIndustry().name(), other.getId().toString());
+        // 매칭 성공 시 Redis 대기열에서 제외 (DB 트랜잭션 롤백 시 정합성 불일치를 방지하기 위해 커밋 완료 후 삭제)
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        redisTemplate.opsForZSet().remove("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString());
+                        redisTemplate.opsForZSet().remove("match:queue:" + other.getIndustry().name(), other.getId().toString());
+                    }
+                }
+            );
+        } else {
+            redisTemplate.opsForZSet().remove("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString());
+            redisTemplate.opsForZSet().remove("match:queue:" + other.getIndustry().name(), other.getId().toString());
+        }
 
         ChatRoom chatRoom = chatRoomService.createChatRoom(List.of(matchRequest.getMember(), other.getMember()));
         matchRequestRepository.assignRoom(matchRequest.getId(), chatRoom.getId());

@@ -35,6 +35,9 @@ public class ChatMessageService {
     private final ChatMessageRepository chatMessageRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper = 
+            new com.fasterxml.jackson.databind.ObjectMapper()
+                    .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
 
     @Transactional
     public ChatRoomMessageResponseDto sendMessage(UUID roomId, Member sender, String content) {
@@ -126,7 +129,7 @@ public class ChatMessageService {
         if (cachedData != null && !cachedData.isEmpty()) {
             // Redis 캐시 히트 (Cache Hit)
             List<RedisChatMessageDto> cachedMessages = cachedData.stream()
-                    .map(obj -> (RedisChatMessageDto) obj)
+                    .map(obj -> objectMapper.convertValue(obj, RedisChatMessageDto.class))
                     .toList();
 
             if (after != null) {
