@@ -143,11 +143,11 @@ export default function HomePage() {
   }, [preClick, startMatch]);
 
   const s = {
-    card: { width: 560, background: '#fff', borderRadius: 24, boxShadow: '0 1px 10px rgba(32,33,36,.18)', marginTop: 20 } as const,
+    card: { width: '100%', maxWidth: 560, background: '#fff', borderRadius: 24, boxShadow: '0 1px 10px rgba(32,33,36,.18)', marginTop: 20, boxSizing: 'border-box' } as const,
     searchRow: { height: 46, display: 'flex', alignItems: 'center', gap: 13, padding: '0 16px' } as const,
     sep: { height: 1, background: '#e8eaed', margin: '0 14px' } as const,
-    industryRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '6px 18px', borderBottom: '1px solid #e8eaed' } as const,
-    hintRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 18px' } as const,
+    industryRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, padding: '6px 18px', borderBottom: '1px solid #e8eaed' } as const,
+    hintRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 4, padding: '9px 18px' } as const,
     hintText: { fontSize: 11, color: '#bdc1c6' } as const,
   };
 
@@ -156,7 +156,7 @@ export default function HomePage() {
       <TangbisilLogo size={58} />
 
       {showTimeout && (
-        <div style={{ width: 560, marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fef7e0', border: '1px solid #f5b400', borderRadius: 12, padding: '10px 16px' }}>
+        <div style={{ width: '100%', maxWidth: 560, boxSizing: 'border-box', marginTop: 14, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fef7e0', border: '1px solid #f5b400', borderRadius: 12, padding: '10px 16px' }}>
           <span style={{ fontSize: 13, color: '#5f3e00' }}>매칭 시간이 초과됐어요. 다시 시도해보세요.</span>
           <button onClick={() => setShowTimeout(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}><XIcon /></button>
         </div>

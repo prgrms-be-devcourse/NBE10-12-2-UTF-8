@@ -132,7 +132,7 @@ function MyPageInner() {
         <span style={{ fontSize: 13, color: '#5f6368' }}>내 계정</span>
       </div>
 
-      <div style={{ flex: 1, padding: '34px 40px', maxWidth: 700, margin: '0 auto', width: '100%' }}>
+      <div style={{ flex: 1, padding: '34px 20px', maxWidth: 700, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
         {isOnboarding && (
           <div style={{ marginBottom: 22, padding: '14px 18px', background: '#e8f0fe', border: '1px solid #c5d8fd', borderRadius: 12, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
@@ -199,7 +199,7 @@ function MyPageInner() {
           </button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
           <button
             onClick={handleLogout}
             style={{ padding: '11px 20px', border: '1px solid #dadce0', borderRadius: 8, fontSize: 14, color: '#3c4043', background: '#fff', cursor: 'pointer' }}

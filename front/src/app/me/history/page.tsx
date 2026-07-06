@@ -52,7 +52,7 @@ export default function MatchHistoryPage() {
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#5f6368' }}>← 돌아가기</button>
       </div>
 
-      <div style={{ flex: 1, padding: '28px 40px', maxWidth: 700, margin: '0 auto', width: '100%' }}>
+      <div style={{ flex: 1, padding: '28px 20px', maxWidth: 700, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#9aa0a6', fontSize: 13 }}>로딩 중...</div>
         ) : error ? (
