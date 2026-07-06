@@ -289,13 +289,13 @@ export type AdminReportDetail = {
   }>;
 };
 
-export const apiGetAdminReports = (page = 0, size = 10) =>
+export const apiGetAdminReports = (page = 0, size = 10, status?: 'PENDING' | 'PROCESSED') =>
   req<{
     content: AdminReport[];
     totalPages: number;
     totalElements: number;
     pageable: { pageNumber: number; pageSize: number };
-  }>(`/api/v1/admin/reports?page=${page}&size=${size}`);
+  }>(`/api/v1/admin/reports?page=${page}&size=${size}${status ? `&status=${status}` : ''}`);
 
 export const apiGetAdminReport = (reportId: string) =>
   req<AdminReportDetail>(`/api/v1/admin/reports/${reportId}`);

@@ -138,13 +138,6 @@ export default function LoginPage() {
         </a>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 18, fontSize: 11.5, color: '#9aa0a6' }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-          <rect x="4" y="10" width="16" height="11" rx="2" stroke="#9aa0a6" strokeWidth="2" />
-          <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#9aa0a6" strokeWidth="2" />
-        </svg>
-        Access Token 30분 · Refresh Token 1달 · BCrypt 암호화 저장
-      </div>
     </div>
   );
 }

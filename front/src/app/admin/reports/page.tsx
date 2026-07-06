@@ -7,11 +7,19 @@ import AdminHeader from '@/components/AdminHeader';
 
 const PAGE_SIZE = 10;
 
+type StatusFilter = 'ALL' | 'PENDING' | 'PROCESSED';
+
 const STATUS_LABEL: Record<string, string> = { PENDING: '처리 전', PROCESSED: '처리 완료' };
 const STATUS_STYLE: Record<string, { background: string; color: string }> = {
   PENDING:   { background: '#fce8e6', color: '#c5221f' },
   PROCESSED: { background: '#e6f4ea', color: '#137333' },
 };
+
+const FILTER_TABS: { key: StatusFilter; label: string }[] = [
+  { key: 'ALL',       label: '전체' },
+  { key: 'PENDING',   label: '처리 전' },
+  { key: 'PROCESSED', label: '처리 완료' },
+];
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -25,12 +33,14 @@ export default function AdminReportsPage() {
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState('');
+  const [filter, setFilter]               = useState<StatusFilter>('ALL');
 
   useEffect(() => {
     if (!isAdmin()) { router.replace('/login'); return; }
     setLoading(true);
     setError('');
-    apiGetAdminReports(page, PAGE_SIZE)
+    const statusParam = filter === 'ALL' ? undefined : filter;
+    apiGetAdminReports(page, PAGE_SIZE, statusParam)
       .then(data => {
         setReports(data.content);
         setTotalPages(data.totalPages);
@@ -38,10 +48,12 @@ export default function AdminReportsPage() {
       })
       .catch(() => setError('데이터를 불러오지 못했어요'))
       .finally(() => setLoading(false));
-  }, [page, router]);
+  }, [page, filter, router]);
 
-  const pendingReports   = reports.filter(r => r.status === 'PENDING');
-  const processedReports = reports.filter(r => r.status === 'PROCESSED');
+  const handleFilterChange = (next: StatusFilter) => {
+    setFilter(next);
+    setPage(0);
+  };
 
   const renderRow = (r: AdminReport) => (
     <div
@@ -63,19 +75,35 @@ export default function AdminReportsPage() {
     </div>
   );
 
-  const sectionHeader = (label: string, count: number, color: string, bg: string) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 18px', background: bg, borderTop: '1px solid #ebebeb' }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: 0.3 }}>{label}</span>
-      <span style={{ fontSize: 11, color, opacity: 0.7 }}>({count}건)</span>
-    </div>
-  );
-
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f8f9fa', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
       <AdminHeader active="reports" />
 
       <div style={{ flex: 1, padding: '24px 26px', overflowY: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          {/* 필터 탭 */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            {FILTER_TABS.map(tab => {
+              const active = filter === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => handleFilterChange(tab.key)}
+                  style={{
+                    padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: active ? 700 : 400,
+                    border: active ? 'none' : '1px solid #dadce0',
+                    background: active
+                      ? tab.key === 'PENDING' ? '#c5221f' : tab.key === 'PROCESSED' ? '#137333' : '#3b7ff2'
+                      : '#fff',
+                    color: active ? '#fff' : '#5f6368',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
           <span style={{ fontSize: 13, color: '#5f6368' }}>총 {totalElements.toLocaleString('ko-KR')}건</span>
         </div>
 
@@ -91,14 +119,7 @@ export default function AdminReportsPage() {
           ) : reports.length === 0 ? (
             <div style={{ padding: '30px 18px', textAlign: 'center', fontSize: 13, color: '#9aa0a6' }}>신고 내역 없음</div>
           ) : (
-            <>
-              {pendingReports.length > 0 && (
-                <>{sectionHeader('처리 전', pendingReports.length, '#c5221f', '#fff8f7')}{pendingReports.map(renderRow)}</>
-              )}
-              {processedReports.length > 0 && (
-                <>{sectionHeader('처리 완료', processedReports.length, '#137333', '#f6fdf7')}{processedReports.map(renderRow)}</>
-              )}
-            </>
+            reports.map(renderRow)
           )}
         </div>
 
