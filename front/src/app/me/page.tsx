@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import { apiGetMe, apiUpdateMe, apiLogout, apiDeleteMe, clearTokens, INDUSTRY_NAMES, INDUSTRY_CODES } from '@/lib/api';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { apiGetMe, apiUpdateMe, apiLogout, apiDeleteMe, clearTokens, INDUSTRY_NAMES, INDUSTRY_CODES, SUSPENDED_STORAGE_KEY } from '@/lib/api';
 
 const CONTACT_URL = 'https://www.google.com/search?q=%EB%A9%94%EB%A1%B1&oq=%EB%A9%94%EB%A1%B1&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQRRg90gEINDM5NGowajeoAgCwAgA&sourceid=chrome&ie=UTF-8';
 
@@ -30,8 +30,10 @@ function TangbisilLogo({ size = 24 }: { size?: number }) {
   );
 }
 
-export default function MyPage() {
+function MyPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isOnboarding = searchParams.get('onboarding') === 'true';
   const [email, setEmail]         = useState('');
   const [current, setCurrent]     = useState('IT/개발');
   const [saved, setSaved]         = useState(false);
@@ -40,8 +42,8 @@ export default function MyPage() {
   const [suspended, setSuspended] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem('tangbisil_suspended')) {
-      localStorage.removeItem('tangbisil_suspended');
+    if (localStorage.getItem(SUSPENDED_STORAGE_KEY)) {
+      localStorage.removeItem(SUSPENDED_STORAGE_KEY);
       setSuspended(true);
       setLoading(false);
       return;
@@ -59,6 +61,10 @@ export default function MyPage() {
     setSaving(true);
     try {
       await apiUpdateMe(INDUSTRY_CODES[current] ?? current);
+      if (isOnboarding) {
+        router.replace('/');
+        return;
+      }
       setSaved(true);
     } finally {
       setSaving(false);
@@ -126,7 +132,22 @@ export default function MyPage() {
         <span style={{ fontSize: 13, color: '#5f6368' }}>내 계정</span>
       </div>
 
-      <div style={{ flex: 1, padding: '34px 40px', maxWidth: 700, margin: '0 auto', width: '100%' }}>
+      <div style={{ flex: 1, padding: '34px 20px', maxWidth: 700, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+        {isOnboarding && (
+          <div style={{ marginBottom: 22, padding: '14px 18px', background: '#e8f0fe', border: '1px solid #c5d8fd', borderRadius: 12, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+              <circle cx="12" cy="12" r="9" stroke="#3b7ff2" strokeWidth="2" />
+              <path d="M12 8v4M12 16h.01" stroke="#3b7ff2" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1a56c4', marginBottom: 3 }}>소셜 로그인 완료! 마지막 단계예요</div>
+              <div style={{ fontSize: 13, color: '#3b7ff2', lineHeight: 1.5 }}>
+                아래에서 <strong>산업군을 선택하고 저장</strong>하면 익명 매칭을 바로 시작할 수 있어요.
+              </div>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 30 }}>
           <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#e8f0fe', color: '#3b7ff2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 700 }}>동</div>
           <div>
@@ -178,7 +199,7 @@ export default function MyPage() {
           </button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
           <button
             onClick={handleLogout}
             style={{ padding: '11px 20px', border: '1px solid #dadce0', borderRadius: 8, fontSize: 14, color: '#3c4043', background: '#fff', cursor: 'pointer' }}
@@ -195,5 +216,19 @@ export default function MyPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MyPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
+          <span style={{ color: '#9aa0a6', fontSize: 13 }}>로딩 중...</span>
+        </div>
+      }
+    >
+      <MyPageInner />
+    </Suspense>
   );
 }

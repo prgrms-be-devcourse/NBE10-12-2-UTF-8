@@ -3,11 +3,15 @@ package com.back.domain.member.member.service;
 import com.back.domain.match.matchRequest.dto.MatchHistoryDto;
 import com.back.domain.match.matchRequest.service.MatchRequestService;
 import com.back.domain.member.member.dto.MemberAdmDto;
+import com.back.domain.member.member.dto.OAuthExchangeResult;
+import com.back.domain.member.member.entity.AuthProvider;
 import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.repository.MemberRepository;
 import com.back.global.exception.ServiceException;
+import com.back.global.security.oauth.OAuthCodeStore;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +33,7 @@ public class MemberService {
     private final PasswordEncoder passwordEncoder;
     private final MemberRepository memberRepository;
     private final MatchRequestService matchRequestService;
+    private final OAuthCodeStore oAuthCodeStore;
 
     public long count() {
         return memberRepository.count();
@@ -44,6 +49,38 @@ public class MemberService {
         Member member = new Member(email, encodedPassword, industry, role);
 
         return memberRepository.save(member);
+    }
+
+    @Transactional
+    public Member findOrCreateOAuthMember(String email, AuthProvider provider, String providerId) {
+        Optional<Member> existingMember = memberRepository.findByProviderAndProviderId(provider, providerId);
+
+        if (existingMember.isPresent()) {
+            return existingMember.get();
+        }
+
+        try {
+            Member newMember = Member.ofOAuth(email, provider, providerId);
+            return memberRepository.save(newMember);
+        } catch (DataIntegrityViolationException e) {
+            // 동시에 같은 (provider, providerId)로 로그인 시도가 들어와 다른 요청이 먼저 저장한 경우
+            return memberRepository.findByProviderAndProviderId(provider, providerId)
+                    .orElseThrow(() -> e);
+        }
+    }
+
+    @Transactional
+    public OAuthExchangeResult exchangeOAuthCode(String code) {
+        UUID memberId = oAuthCodeStore.consume(code);
+
+        Member member = findById(memberId)
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
+
+        String accessToken = genAccessToken(member);
+        UUID refreshToken = genRefreshToken(member);
+        boolean needsOnboarding = member.getIndustry() == null;
+
+        return new OAuthExchangeResult(accessToken, refreshToken, needsOnboarding);
     }
 
     public void checkPassword(Member member, String password) {

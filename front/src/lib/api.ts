@@ -1,4 +1,17 @@
+import isEmail from "validator/lib/isEmail";
+
 const BASE = "";
+
+// 백엔드가 직접 처리하는 OAuth2 인가 엔드포인트(풀 리다이렉트용) — /api 프록시 대상이 아니라 백엔드 origin이 그대로 필요함
+export const OAUTH_SERVER_BASE = (
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+).replace(/\/$/, "");
+
+// 이메일 형식 검증 — 직접 만든 정규식은 허용 문자를 빠뜨리기 쉬워서(예: [^\s@]류 부정 클래스는
+// 한글도 통과시켜버림) validator 라이브러리의 검증 로직을 그대로 사용함
+// isEmail은 문자열이 아니면 예외를 던지므로, 타입상 string이어도 런타임 null/undefined를 방어함
+export const isValidEmail = (value: string) =>
+  typeof value === "string" && !!value && isEmail(value);
 
 /* ── Token / admin storage ──────────────────────────────────────── */
 export const getToken = (): string | null =>
@@ -18,6 +31,9 @@ export const clearTokens = () => {
 export const setAdmin = () => localStorage.setItem("isAdmin", "1");
 export const isAdmin = () =>
   typeof window !== "undefined" && localStorage.getItem("isAdmin") === "1";
+
+// 정지된 계정으로 로그인 시 /me 페이지에 정지 안내를 띄우기 위한 1회성 플래그 키
+export const SUSPENDED_STORAGE_KEY = "tangbisil_suspended";
 
 // JWT의 role 클레임을 읽어 관리자 여부를 판별 (백엔드는 별도의 /me role 필드를 내려주지 않음)
 export const getRoleFromToken = (token: string): string | null => {
@@ -92,6 +108,18 @@ export const apiSignup = (email: string, password: string, industry: string) =>
 
 export const apiLogout = () =>
   req<null>("/api/v1/members/logout", { method: "POST" });
+
+export const apiOAuthExchange = (code: string) =>
+  req<{
+    grantType: string;
+    accessToken: string;
+    refreshToken: string;
+    accessTokenExpiresIn: number;
+    needsOnboarding: boolean;
+  }>("/api/v1/members/oauth/exchange", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
 
 export const apiRefreshToken = () =>
   req<{ grantType: string; accessToken: string; refreshToken: string; accessTokenExpiresIn: number }>(
@@ -269,13 +297,13 @@ export type AdminReportDetail = {
   }>;
 };
 
-export const apiGetAdminReports = (page = 0, size = 10) =>
+export const apiGetAdminReports = (page = 0, size = 10, status?: 'PENDING' | 'PROCESSED') =>
   req<{
     content: AdminReport[];
     totalPages: number;
     totalElements: number;
     pageable: { pageNumber: number; pageSize: number };
-  }>(`/api/v1/admin/reports?page=${page}&size=${size}`);
+  }>(`/api/v1/admin/reports?page=${page}&size=${size}${status ? `&status=${status}` : ''}`);
 
 export const apiGetAdminReport = (reportId: string) =>
   req<AdminReportDetail>(`/api/v1/admin/reports/${reportId}`);

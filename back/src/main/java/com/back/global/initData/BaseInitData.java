@@ -1,5 +1,7 @@
 package com.back.global.initData;
 
+import com.back.domain.bot.BotAccounts;
+import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.service.MemberService;
 import com.back.global.app.AppConfig;
 import lombok.RequiredArgsConstructor;
@@ -43,5 +45,10 @@ public class BaseInitData {
         memberService.join("user1@test.com", "1234", IT, "USER");
         memberService.join("user2@test.com", "1234", OFFICE, "USER");
         memberService.join("user3@test.com", "1234", FINANCE, "USER");
+
+        // 지인 테스트용 봇 계정 (산업군마다 하나씩) - tryMatch()가 필요할 때 즉석으로 매칭 요청을 만듦
+        for (Industry industry : Industry.values()) {
+            memberService.join(BotAccounts.emailFor(industry), BotAccounts.PASSWORD, industry, "USER");
+        }
     }
 }

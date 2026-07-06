@@ -6,8 +6,28 @@ on:
   workflow_dispatch:
 
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      back: ${{ steps.filter.outputs.back }}
+      front: ${{ steps.filter.outputs.front }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 변경된 경로 감지
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            back:
+              - 'back/**'
+            front:
+              - 'front/**'
+
   build-and-push-back:
-    if: github.event_name == 'workflow_dispatch' || contains(toJson(github.event.commits), '"back/')
+    needs: detect-changes
+    if: github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.back == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,7 +61,8 @@ jobs:
             https://backboard.railway.app/graphql/v2
 
   build-and-push-front:
-    if: github.event_name == 'workflow_dispatch' || contains(toJson(github.event.commits), '"front/')
+    needs: detect-changes
+    if: github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.front == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -68,7 +89,7 @@ jobs:
             -d '{
               "query": "mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) { serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId) }",
               "variables": {
-                "serviceId": "2feda8a7-5ab7-4c73-9e39-ce1d9ff6572f",
+                "serviceId": "${{ secrets.RAILWAY_FRONT_SERVICE_ID }}",
                 "environmentId": "7bb326a9-c879-4457-a33d-f0605d23ae75"
               }
             }' \
