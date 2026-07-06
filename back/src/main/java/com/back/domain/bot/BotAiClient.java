@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -17,7 +18,20 @@ import java.util.Map;
 @Slf4j
 @Component
 public class BotAiClient {
-    private final RestClient restClient = RestClient.create();
+
+    private static final int CONNECT_TIMEOUT_MS = 3000;
+    private static final int READ_TIMEOUT_MS = 5000;
+
+    private final RestClient restClient = RestClient.builder()
+            .requestFactory(createRequestFactory())
+            .build();
+
+    private static SimpleClientHttpRequestFactory createRequestFactory() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(CONNECT_TIMEOUT_MS);
+        factory.setReadTimeout(READ_TIMEOUT_MS);
+        return factory;
+    }
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${custom.bot.groq-api-key:}")

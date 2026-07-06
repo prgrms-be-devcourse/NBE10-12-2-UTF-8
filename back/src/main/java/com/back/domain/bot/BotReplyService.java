@@ -148,11 +148,7 @@ public class BotReplyService {
 """.formatted(industry != null ? industry.getLabel() : "일반 사무직");
 
         conversation.forEach(c ->
-                System.out.println(
-                        (c.getKey() ? "BOT" : "USER")
-                                + " : "
-                                + c.getValue()
-                )
+                log.debug("{} : {}", c.getKey() ? "BOT" : "USER", c.getValue())
         );
         String aiReply = conversation.isEmpty()
                 ? botAiClient.generateReply(systemInstruction, List.of())
