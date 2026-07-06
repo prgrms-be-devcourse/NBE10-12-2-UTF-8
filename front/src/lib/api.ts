@@ -9,7 +9,9 @@ export const OAUTH_SERVER_BASE = (
 
 // 이메일 형식 검증 — 직접 만든 정규식은 허용 문자를 빠뜨리기 쉬워서(예: [^\s@]류 부정 클래스는
 // 한글도 통과시켜버림) validator 라이브러리의 검증 로직을 그대로 사용함
-export const isValidEmail = (value: string) => isEmail(value);
+// isEmail은 문자열이 아니면 예외를 던지므로, 타입상 string이어도 런타임 null/undefined를 방어함
+export const isValidEmail = (value: string) =>
+  typeof value === "string" && !!value && isEmail(value);
 
 /* ── Token / admin storage ──────────────────────────────────────── */
 export const getToken = (): string | null =>
