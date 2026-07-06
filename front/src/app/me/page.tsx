@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { apiGetMe, apiUpdateMe, apiLogout, apiDeleteMe, clearTokens, INDUSTRY_NAMES, INDUSTRY_CODES } from '@/lib/api';
+import { apiGetMe, apiUpdateMe, apiLogout, apiDeleteMe, clearTokens, INDUSTRY_NAMES, INDUSTRY_CODES, SUSPENDED_STORAGE_KEY } from '@/lib/api';
 
 const CONTACT_URL = 'https://www.google.com/search?q=%EB%A9%94%EB%A1%B1&oq=%EB%A9%94%EB%A1%B1&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQRRg90gEINDM5NGowajeoAgCwAgA&sourceid=chrome&ie=UTF-8';
 
@@ -40,8 +40,8 @@ export default function MyPage() {
   const [suspended, setSuspended] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem('tangbisil_suspended')) {
-      localStorage.removeItem('tangbisil_suspended');
+    if (localStorage.getItem(SUSPENDED_STORAGE_KEY)) {
+      localStorage.removeItem(SUSPENDED_STORAGE_KEY);
       setSuspended(true);
       setLoading(false);
       return;

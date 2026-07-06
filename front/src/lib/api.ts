@@ -1,5 +1,10 @@
 const BASE = "";
 
+// 백엔드가 직접 처리하는 OAuth2 인가 엔드포인트(풀 리다이렉트용) — /api 프록시 대상이 아니라 백엔드 origin이 그대로 필요함
+export const OAUTH_SERVER_BASE = (
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+).replace(/\/$/, "");
+
 /* ── Token / admin storage ──────────────────────────────────────── */
 export const getToken = (): string | null =>
   typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
@@ -18,6 +23,9 @@ export const clearTokens = () => {
 export const setAdmin = () => localStorage.setItem("isAdmin", "1");
 export const isAdmin = () =>
   typeof window !== "undefined" && localStorage.getItem("isAdmin") === "1";
+
+// 정지된 계정으로 로그인 시 /me 페이지에 정지 안내를 띄우기 위한 1회성 플래그 키
+export const SUSPENDED_STORAGE_KEY = "tangbisil_suspended";
 
 // JWT의 role 클레임을 읽어 관리자 여부를 판별 (백엔드는 별도의 /me role 필드를 내려주지 않음)
 export const getRoleFromToken = (token: string): string | null => {
@@ -92,6 +100,18 @@ export const apiSignup = (email: string, password: string, industry: string) =>
 
 export const apiLogout = () =>
   req<null>("/api/v1/members/logout", { method: "POST" });
+
+export const apiOAuthExchange = (code: string) =>
+  req<{
+    grantType: string;
+    accessToken: string;
+    refreshToken: string;
+    accessTokenExpiresIn: number;
+    needsOnboarding: boolean;
+  }>("/api/v1/members/oauth/exchange", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
 
 export const apiRefreshToken = () =>
   req<{ grantType: string; accessToken: string; refreshToken: string; accessTokenExpiresIn: number }>(
