@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { apiLogin, apiGetActiveRoom, setTokens, setAdmin, getRoleFromToken, OAUTH_SERVER_BASE, SUSPENDED_STORAGE_KEY } from '@/lib/api';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { apiLogin, apiGetActiveRoom, setTokens, setAdmin, getRoleFromToken, OAUTH_SERVER_BASE, SUSPENDED_STORAGE_KEY, isValidEmail } from '@/lib/api';
 
 const LOGO_CHARS = [
   { c: 'T', color: '#3b7ff2' }, { c: 'a', color: '#ea4c4c' }, { c: 'n', color: '#f5b400' },
@@ -19,16 +19,29 @@ function TangbisilLogo({ size = 42 }: { size?: number }) {
   );
 }
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [pwFocused, setPwFocused] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showSignupToast, setShowSignupToast] = useState(() => searchParams.get('signup') === 'success');
+
+  useEffect(() => {
+    if (!showSignupToast) return;
+    const t = setTimeout(() => setShowSignupToast(false), 3000);
+    return () => clearTimeout(t);
+  }, [showSignupToast]);
 
   const handleLogin = async () => {
     if (!email || !password) return;
+    if (!isValidEmail(email)) {
+      setError('올바른 이메일 형식이 아니에요');
+      return;
+    }
     setError('');
     setLoading(true);
     try {
@@ -57,13 +70,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
-      <TangbisilLogo size={42} />
-      <div style={{ fontSize: 14, color: '#5f6368', marginBottom: 26, marginTop: 8 }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff', fontFamily: "Arial, 'Helvetica Neue', sans-serif", padding: '24px 16px', boxSizing: 'border-box' }}>
+      {showSignupToast && (
+        <div style={{ position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 8, background: '#202124', color: '#fff', borderRadius: 10, padding: '12px 18px', fontSize: 13.5, fontWeight: 500, boxShadow: '0 4px 16px rgba(0,0,0,.2)', zIndex: 200 }}>
+          <span style={{ color: '#34a06b' }}>✓</span>
+          회원가입이 완료됐어요. 로그인해주세요
+        </div>
+      )}
+      <Link href="/" style={{ textDecoration: 'none' }}><TangbisilLogo size={42} /></Link>
+      <div style={{ fontSize: 14, color: '#5f6368', marginBottom: 26, marginTop: 8, textAlign: 'center' }}>
         검색하듯 로그인하고, 익명으로 동료와 연결되세요
       </div>
 
-      <div style={{ width: 400, border: '1px solid #dadce0', borderRadius: 14, padding: '30px 30px 26px' }}>
+      <div style={{ width: '100%', maxWidth: 400, border: '1px solid #dadce0', borderRadius: 14, padding: '30px 24px 26px', boxSizing: 'border-box' }}>
         <div style={{ fontSize: 20, color: '#202124', fontWeight: 500, marginBottom: 22 }}>로그인</div>
 
         <div style={{ fontSize: 12, color: '#5f6368', marginBottom: 6 }}>이메일</div>
@@ -77,12 +96,14 @@ export default function LoginPage() {
         />
 
         <div style={{ fontSize: 12, color: '#5f6368', marginBottom: 6 }}>비밀번호</div>
-        <div style={{ width: '100%', height: 46, border: `2px solid ${error ? '#ea4c4c' : '#3b7ff2'}`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', marginBottom: 10, boxSizing: 'border-box' }}>
+        <div style={{ width: '100%', height: 46, border: `1px solid ${error ? '#ea4c4c' : pwFocused ? '#3b7ff2' : '#dadce0'}`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', marginBottom: 10, boxSizing: 'border-box' }}>
           <input
             type={showPw ? 'text' : 'password'}
             value={password}
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
+            onFocus={() => setPwFocused(true)}
+            onBlur={() => setPwFocused(false)}
             placeholder="••••••••"
             style={{ border: 'none', outline: 'none', fontSize: 16, color: '#202124', letterSpacing: 2, flex: 1, background: 'transparent' }}
           />
@@ -137,14 +158,14 @@ export default function LoginPage() {
           카카오로 계속하기
         </a>
       </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 18, fontSize: 11.5, color: '#9aa0a6' }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-          <rect x="4" y="10" width="16" height="11" rx="2" stroke="#9aa0a6" strokeWidth="2" />
-          <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#9aa0a6" strokeWidth="2" />
-        </svg>
-        Access Token 30분 · Refresh Token 1달 · BCrypt 암호화 저장
-      </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   );
 }

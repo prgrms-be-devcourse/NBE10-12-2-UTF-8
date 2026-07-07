@@ -1,6 +1,7 @@
 package com.back.domain.match.matchRequest.repository;
 
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
+import com.back.domain.match.matchRequest.dto.SituationStatisticsDto;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.match.matchRequest.entity.Situation;
@@ -53,7 +54,15 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
     List<MatchRequest> findPendingByIndustry(
             @Param("industry") Industry industry,
             @Param("status") MatchStatus status);
-
+    @Query("""
+         SELECT new com.back.domain.match.matchRequest.dto.SituationStatisticsDto(r.situation, COUNT(r))
+         FROM MatchRequest r
+         WHERE r.status = :status AND r.room.status = :roomStatus
+         GROUP BY r.situation
+         """)
+    List<SituationStatisticsDto> countActiveBySituation(
+            @Param("status") MatchStatus status,
+            @Param("roomStatus") ChatRoomStatus roomStatus);
     // retryPendingMatches의 재시도 대상 조회 - member까지 즉시 로딩해서
     // REQUIRES_NEW로 트랜잭션이 분리되는 재시도 처리 도중 지연 로딩 프록시가
     // 세션 없이 초기화되는 LazyInitializationException을 방지한다.
@@ -77,7 +86,15 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
             @Param("status") MatchStatus status,
             @Param("expiredBefore") LocalDateTime expiredBefore);
 
-    List<MatchRequest> findByMemberAndRoomStatus(Member member, ChatRoomStatus status);
+    @Query("""
+       SELECT r FROM MatchRequest r
+       JOIN FETCH r.room
+       WHERE r.member = :member AND r.room.status = :status
+       ORDER BY r.room.createdAt DESC
+       """)
+    List<MatchRequest> findByMemberAndRoomStatus(
+            @Param("member") Member member,
+            @Param("status") ChatRoomStatus status);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "UPDATE match_request SET status = 'MATCHED', version = version + 1, modified_at = CURRENT_TIMESTAMP " +
@@ -101,4 +118,8 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
            WHERE r.id = :id
            """)
     Optional<MatchRequest> findByIdWithMember(@Param("id") UUID id);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM MatchRequest r WHERE r.member = :member")
+    void deleteByMember(@Param("member") Member member);
 }

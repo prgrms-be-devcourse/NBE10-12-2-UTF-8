@@ -40,7 +40,7 @@ function OAuthCallbackInner() {
         setTokens(data.accessToken, data.refreshToken);
 
         if (data.needsOnboarding) {
-          router.replace('/me');
+          router.replace('/me?onboarding=true');
           return;
         }
 

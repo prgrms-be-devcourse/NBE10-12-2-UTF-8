@@ -67,6 +67,7 @@ export default function ChatPage() {
   const [userIndustry, setUserIndustry] = useState('');
   const [partnerLeft, setPartnerLeft]   = useState(false);
   const [chatExpired, setChatExpired]   = useState(false);
+  const [isBot, setIsBot]               = useState(false);
 
   const [reportTarget, setReportTarget]           = useState<ChatMsg | null>(null);
   const [reportReason, setReportReason]           = useState('');
@@ -158,6 +159,7 @@ export default function ChatPage() {
 
     apiGetRoom(roomId)
       .then(room => {
+        setIsBot(room.isBot);
         if (room.status === 'CLOSED') { endChat(); return; }
         const endTime = new Date(room.createdAt).getTime() + 10 * 60 * 1000;
         const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
@@ -205,15 +207,15 @@ export default function ChatPage() {
   const fmtTimer = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-  const partnerNickname = messages.find(m => !m.isMine)?.senderNickname ?? '익명의 상대';
+  const partnerNickname = isBot ? 'AI' : (messages.find(m => !m.isMine)?.senderNickname ?? '익명의 상대');
   const displayMessages = [...messages].reverse();
 
   const s = {
-    card: { width: 560, background: '#fff', borderRadius: 24, boxShadow: '0 1px 10px rgba(32,33,36,.18)', marginTop: 20 } as const,
+    card: { width: '100%', maxWidth: 560, background: '#fff', borderRadius: 24, boxShadow: '0 1px 10px rgba(32,33,36,.18)', marginTop: 20, boxSizing: 'border-box' } as const,
     searchRow: { height: 46, display: 'flex', alignItems: 'center', gap: 13, padding: '0 16px' } as const,
     sep: { height: 1, background: '#e8eaed', margin: '0 14px' } as const,
-    industryRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '6px 18px', borderBottom: '1px solid #e8eaed' } as const,
-    hintRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 18px' } as const,
+    industryRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, padding: '6px 18px', borderBottom: '1px solid #e8eaed' } as const,
+    hintRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 4, padding: '9px 18px' } as const,
     hintText: { fontSize: 11, color: '#bdc1c6' } as const,
   };
 
@@ -257,6 +259,13 @@ export default function ChatPage() {
         </div>
 
         <div style={{ padding: '12px 18px 14px' }}>
+          {isBot && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f3e8ff', border: '1px solid #b083f2', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+              <span style={{ fontSize: 16 }}>🤖</span>
+              <span style={{ fontSize: 13, color: '#5b2fa6', fontWeight: 500 }}>지금 실시간 상대가 없어 AI와 매칭되었습니다</span>
+            </div>
+          )}
+
           {chatExpired && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#e8f0fe', border: '1px solid #3b7ff2', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -280,8 +289,13 @@ export default function ChatPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 11 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: chatClosed ? '#9aa0a6' : '#34a06b', display: 'inline-block' }} />
-              <span style={{ fontSize: 12, color: '#5f6368' }}>
+              <span style={{ fontSize: 12, color: '#5f6368', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <b style={{ color: '#3c4043', fontWeight: 600 }}>{partnerNickname}</b>
+                {isBot && (
+                  <span style={{ display: 'inline-block', padding: '2px 7px', borderRadius: 8, fontSize: 10, fontWeight: 600, background: '#f3e8ff', color: '#7e3ff2' }}>
+                    🤖 AI
+                  </span>
+                )}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -332,11 +346,11 @@ export default function ChatPage() {
       {reportTarget && (
         <div
           onClick={closeReportModal}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16, boxSizing: 'border-box' }}
         >
           <div
             onClick={e => e.stopPropagation()}
-            style={{ background: '#fff', borderRadius: 16, padding: '26px 28px', width: 380, boxShadow: '0 4px 24px rgba(0,0,0,.18)' }}
+            style={{ background: '#fff', borderRadius: 16, padding: '26px 28px', width: '100%', maxWidth: 380, boxSizing: 'border-box', boxShadow: '0 4px 24px rgba(0,0,0,.18)' }}
           >
             {reportDone ? (
               <>

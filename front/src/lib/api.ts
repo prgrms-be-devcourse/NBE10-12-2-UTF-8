@@ -1,9 +1,17 @@
+import isEmail from "validator/lib/isEmail";
+
 const BASE = "";
 
 // 백엔드가 직접 처리하는 OAuth2 인가 엔드포인트(풀 리다이렉트용) — /api 프록시 대상이 아니라 백엔드 origin이 그대로 필요함
 export const OAUTH_SERVER_BASE = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
 ).replace(/\/$/, "");
+
+// 이메일 형식 검증 — 직접 만든 정규식은 허용 문자를 빠뜨리기 쉬워서(예: [^\s@]류 부정 클래스는
+// 한글도 통과시켜버림) validator 라이브러리의 검증 로직을 그대로 사용함
+// isEmail은 문자열이 아니면 예외를 던지므로, 타입상 string이어도 런타임 null/undefined를 방어함
+export const isValidEmail = (value: string) =>
+  typeof value === "string" && !!value && isEmail(value);
 
 /* ── Token / admin storage ──────────────────────────────────────── */
 export const getToken = (): string | null =>
@@ -136,6 +144,7 @@ export type MatchHistoryDto = {
   industry: string;
   situation: string;
   status: 'ACTIVE' | 'CLOSED';
+  isBot: boolean;
 };
 
 export const apiGetMatchHistory = () =>
@@ -158,6 +167,15 @@ export const apiGetMatch = (matchRequestId: string) =>
 export const apiCancelMatch = (matchRequestId: string) =>
   req<null>(`/api/v1/matches/${matchRequestId}`, { method: "DELETE" });
 
+export type HomeStats = {
+  totalActiveUsers: number;
+  situationStats: Array<{ situation: string; count: number }>;
+};
+
+// 홈 화면 실시간 통계(총 이용자 수 + 상황별 대화 인원) — 비로그인 사용자도 호출 가능
+export const apiGetHomeStats = () =>
+  req<HomeStats>("/api/v1/matches/stats/home");
+
 /* ── Chat ───────────────────────────────────────────────────────── */
 export type ChatRoom = {
   roomId: string;
@@ -165,6 +183,7 @@ export type ChatRoom = {
   maxParticipants: number;
   createdAt: string;
   closedAt?: string;
+  isBot: boolean;
 };
 
 export const apiGetRoom = (roomId: string) =>
@@ -289,13 +308,13 @@ export type AdminReportDetail = {
   }>;
 };
 
-export const apiGetAdminReports = (page = 0, size = 10) =>
+export const apiGetAdminReports = (page = 0, size = 10, status?: 'PENDING' | 'PROCESSED') =>
   req<{
     content: AdminReport[];
     totalPages: number;
     totalElements: number;
     pageable: { pageNumber: number; pageSize: number };
-  }>(`/api/v1/admin/reports?page=${page}&size=${size}`);
+  }>(`/api/v1/admin/reports?page=${page}&size=${size}${status ? `&status=${status}` : ''}`);
 
 export const apiGetAdminReport = (reportId: string) =>
   req<AdminReportDetail>(`/api/v1/admin/reports/${reportId}`);

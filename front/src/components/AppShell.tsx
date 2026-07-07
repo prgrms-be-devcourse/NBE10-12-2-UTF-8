@@ -24,7 +24,7 @@ export function AppShell({ children, topAlign = false }: { children: React.React
         )}
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: topAlign ? 'flex-start' : 'center', paddingTop: topAlign ? '22vh' : 0, paddingBottom: 40 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: topAlign ? 'flex-start' : 'center', paddingTop: topAlign ? '22vh' : 0, paddingBottom: 40, paddingLeft: 16, paddingRight: 16, boxSizing: 'border-box', width: '100%' }}>
         {children}
       </div>
 

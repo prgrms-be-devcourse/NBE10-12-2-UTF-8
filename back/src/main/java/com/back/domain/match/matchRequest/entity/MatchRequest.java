@@ -13,6 +13,9 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor
+@Table(name = "match_request", indexes = {
+        @Index(name = "idx_match_request_status_room_id", columnList = "status, room_id")
+})
 public class MatchRequest extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)

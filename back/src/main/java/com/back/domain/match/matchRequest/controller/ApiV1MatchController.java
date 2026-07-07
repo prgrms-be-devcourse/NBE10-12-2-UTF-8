@@ -2,6 +2,7 @@ package com.back.domain.match.matchRequest.controller;
 
 import com.back.domain.match.matchRequest.dto.MatchRequestDto;
 import com.back.domain.match.matchRequest.dto.MatchResponseDto;
+import com.back.domain.match.matchRequest.dto.SituationStatisticsDto;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.match.matchRequest.service.MatchRequestService;
@@ -11,11 +12,13 @@ import com.back.global.exception.ServiceException;
 import com.back.global.rq.Rq;
 import com.back.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -81,7 +84,27 @@ public class ApiV1MatchController {
         );
     }
 
+    public record HomeStatsRes(
+            @Schema(description = "현재 대화 중인 전체 인원 수 (상황별 인원의 합)")
+            long totalActiveUsers,
+            @Schema(description = "상황별 현재 대화 중인 인원 통계 목록")
+            List<SituationStatisticsDto> situationStats
+    ) {}
 
+    @GetMapping("/stats/home")
+    @Operation(summary = "홈 화면 실시간 통계 조회")
+    public RsData<HomeStatsRes> getHomeStats() {
+        List<SituationStatisticsDto> situationStats = matchRequestService.getSituationStatistics();
+        long totalActiveUsers = situationStats.stream()
+                .mapToLong(SituationStatisticsDto::count)
+                .sum();
+
+        return new RsData<>(
+                "200-1",
+                "홈 화면 통계 조회 성공",
+                new HomeStatsRes(totalActiveUsers, situationStats)
+        );
+    }
 
 }
 

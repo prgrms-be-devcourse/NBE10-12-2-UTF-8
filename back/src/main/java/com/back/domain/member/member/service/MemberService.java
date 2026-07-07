@@ -1,5 +1,7 @@
 package com.back.domain.member.member.service;
 
+import com.back.domain.chat.chatRoomMessage.service.ChatMessageService;
+import com.back.domain.chat.chatRoomParticipant.service.ChatRoomParticipantService;
 import com.back.domain.match.matchRequest.dto.MatchHistoryDto;
 import com.back.domain.match.matchRequest.service.MatchRequestService;
 import com.back.domain.member.member.dto.MemberAdmDto;
@@ -23,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +35,8 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final MatchRequestService matchRequestService;
     private final OAuthCodeStore oAuthCodeStore;
+    private final ChatRoomParticipantService chatRoomParticipantService;
+    private final ChatMessageService chatMessageService;
 
     public long count() {
         return memberRepository.count();
@@ -152,14 +155,25 @@ public class MemberService {
     public void delete(Member member) {
         Member findMember = memberRepository.findById(member.getId())
                 .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
+
+        if (matchRequestService.hasPendingRequest(findMember)) {
+            throw new ServiceException("409-2", "진행 중인 매칭 요청이 있어 탈퇴할 수 없습니다. 매칭을 취소한 뒤 다시 시도해주세요.");
+        }
+        if (chatRoomParticipantService.findActiveChatRoomByMember(findMember).isPresent()) {
+            throw new ServiceException("409-3", "진행 중인 채팅방이 있어 탈퇴할 수 없습니다. 채팅을 종료한 뒤 다시 시도해주세요.");
+        }
+
+        // 여기까지 왔으면 남은 건 전부 종료된 이력뿐.
+        // FK 참조 순서(메시지 -> 참여자 -> 매칭요청)대로 정리한 뒤 회원을 삭제한다.
+        chatMessageService.deleteAllByMember(findMember);
+        chatRoomParticipantService.deleteAllByMember(findMember);
+        matchRequestService.deleteAllByMember(findMember);
+
         memberRepository.delete(findMember);
     }
 
     public List<MatchHistoryDto> getMatchHistory(Member member) {
-        return matchRequestService.findMatchHistoryByMember(member)
-                .stream()
-                .map(MatchHistoryDto::new)
-                .collect(Collectors.toList());
+        return matchRequestService.findMatchHistoryByMember(member);
     }
 
     @Transactional

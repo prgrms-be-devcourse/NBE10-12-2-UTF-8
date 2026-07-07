@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   apiCreateMatch, apiGetMatch, apiGetActiveRoom,
-  apiGetMe, getToken, INDUSTRY_NAMES,
+  apiGetMe, apiGetHomeStats, getToken, INDUSTRY_NAMES,
 } from '@/lib/api';
 import { AppShell } from '@/components/AppShell';
 import { TangbisilLogo } from '@/components/TangbisilLogo';
@@ -14,15 +14,15 @@ const MATCH_KEY   = 'tangbisil_match';
 const TIMEOUT_KEY = 'tangbisil_match_timeout';
 
 const TOPICS = [
-  { label: '야근 중',        count: '3.2천' },
-  { label: '회의 폭탄',      count: '2.1천' },
-  { label: '사내 연애 폭로',  count: '1.8천' },
-  { label: '상사 억까',      count: '2.6천' },
-  { label: '사내 정치 피로',  count: '1.4천' },
-  { label: '이직 마려움',    count: '2.9천' },
-  { label: '연봉 협상 앞둠',  count: '980'  },
-  { label: '몰래 루팡중',    count: '1.7천' },
-  { label: '기타',            count: '540'  },
+  { label: '야근 중' },
+  { label: '회의 폭탄' },
+  { label: '사내 연애 폭로' },
+  { label: '상사 억까' },
+  { label: '사내 정치 피로' },
+  { label: '이직 마려움' },
+  { label: '연봉 협상 앞둠' },
+  { label: '몰래 루팡중' },
+  { label: '기타' },
 ];
 
 function SearchIcon({ onClick }: { onClick?: () => void }) {
@@ -68,11 +68,25 @@ function LockIcon() {
 export default function HomePage() {
   const router = useRouter();
   const [preClick, setPreClick]           = useState(true);
-  const [situation, setSituation]         = useState('');
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [userIndustry, setUserIndustry]   = useState('');
   const [matchError, setMatchError]       = useState('');
   const [showTimeout, setShowTimeout]     = useState(false);
+  const [totalActiveUsers, setTotalActiveUsers] = useState(0);
+  const [situationCounts, setSituationCounts]   = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    apiGetHomeStats()
+      .then(stats => {
+        setTotalActiveUsers(stats.totalActiveUsers);
+        setSituationCounts(
+          Object.fromEntries(stats.situationStats.map(s => [s.situation, s.count])),
+        );
+      })
+      .catch((err) => {
+        console.error('Failed to fetch home stats:', err);
+      });
+  }, []);
 
   useEffect(() => {
     const timeoutFlag = localStorage.getItem(TIMEOUT_KEY);
@@ -143,11 +157,11 @@ export default function HomePage() {
   }, [preClick, startMatch]);
 
   const s = {
-    card: { width: 560, background: '#fff', borderRadius: 24, boxShadow: '0 1px 10px rgba(32,33,36,.18)', marginTop: 20 } as const,
+    card: { width: '100%', maxWidth: 560, background: '#fff', borderRadius: 24, boxShadow: '0 1px 10px rgba(32,33,36,.18)', marginTop: 20, boxSizing: 'border-box' } as const,
     searchRow: { height: 46, display: 'flex', alignItems: 'center', gap: 13, padding: '0 16px' } as const,
     sep: { height: 1, background: '#e8eaed', margin: '0 14px' } as const,
-    industryRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '6px 18px', borderBottom: '1px solid #e8eaed' } as const,
-    hintRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 18px' } as const,
+    industryRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, padding: '6px 18px', borderBottom: '1px solid #e8eaed' } as const,
+    hintRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 4, padding: '9px 18px' } as const,
     hintText: { fontSize: 11, color: '#bdc1c6' } as const,
   };
 
@@ -156,7 +170,7 @@ export default function HomePage() {
       <TangbisilLogo size={58} />
 
       {showTimeout && (
-        <div style={{ width: 560, marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fef7e0', border: '1px solid #f5b400', borderRadius: 12, padding: '10px 16px' }}>
+        <div style={{ width: '100%', maxWidth: 560, boxSizing: 'border-box', marginTop: 14, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fef7e0', border: '1px solid #f5b400', borderRadius: 12, padding: '10px 16px' }}>
           <span style={{ fontSize: 13, color: '#5f3e00' }}>매칭 시간이 초과됐어요. 다시 시도해보세요.</span>
           <button onClick={() => setShowTimeout(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}><XIcon /></button>
         </div>
@@ -173,17 +187,12 @@ export default function HomePage() {
               지금 겪고 있는 상황으로 익명 매칭하기
             </span>
           ) : (
-            <input
-              autoFocus
-              type="text"
-              value={situation}
-              onChange={e => { setSituation(e.target.value); setSelectedTopic(null); }}
-              placeholder="관심사를 입력하거나 상황을 골라 매칭하세요"
-              style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: '#3c4043', background: 'transparent' }}
-            />
+            <span style={{ flex: 1, fontSize: 16, color: selectedTopic ? '#3c4043' : '#9aa0a6' }}>
+              {selectedTopic ?? '아래에서 상황을 골라주세요'}
+            </span>
           )}
-          {!preClick && situation && (
-            <button onClick={() => setSituation('')} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2 }}>
+          {!preClick && selectedTopic && (
+            <button onClick={() => setSelectedTopic(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2 }}>
               <XIcon />
             </button>
           )}
@@ -207,7 +216,7 @@ export default function HomePage() {
               {userIndustry && (
                 <span style={{ fontSize: 11, color: '#bdc1c6' }}>가입 시 선택한 업계로 고정</span>
               )}
-              <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#9aa0a6', flexShrink: 0 }}>지금 13,590명 활동 중</span>
+              <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#9aa0a6', flexShrink: 0 }}>지금 {totalActiveUsers.toLocaleString()}명 활동 중</span>
             </div>
 
             <div style={{ padding: '12px 18px' }}>
@@ -221,15 +230,23 @@ export default function HomePage() {
                   return (
                     <span
                       key={t.label}
-                      onClick={() => { setMatchError(''); setSelectedTopic(active ? null : t.label); setSituation(''); }}
+                      onClick={() => { setMatchError(''); setSelectedTopic(active ? null : t.label); }}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: active ? '#e8f0fe' : '#f8f9fa', border: `1px solid ${active ? '#3b7ff2' : '#e8eaed'}`, borderRadius: 16, fontSize: 13, color: active ? '#3b7ff2' : '#3c4043', fontWeight: active ? 600 : 400, cursor: 'pointer' }}
                     >
                       {t.label}
-                      <span style={{ color: '#80868b', fontSize: 11.5 }}>{t.count}</span>
+                      <span style={{ color: '#80868b', fontSize: 11.5 }}>{(situationCounts[t.label] ?? 0).toLocaleString()}</span>
                     </span>
                   );
                 })}
               </div>
+              <button
+                onClick={startMatch}
+                disabled={!selectedTopic}
+                style={{ marginTop: 14, width: '100%', height: 44, background: selectedTopic ? '#3b7ff2' : '#f1f3f4', color: selectedTopic ? '#fff' : '#9aa0a6', border: 'none', borderRadius: 10, fontSize: 14.5, fontWeight: 600, cursor: selectedTopic ? 'pointer' : 'default' }}
+              >
+                {selectedTopic ? `"${selectedTopic}"로 매칭하기` : '상황을 선택해주세요'}
+              </button>
+
               {matchError === 'LOGIN_REQUIRED' ? (
                 <div style={{ marginTop: 10, fontSize: 12, color: '#5f6368' }}>
                   매칭하려면 로그인이 필요해요.{' '}
@@ -256,7 +273,7 @@ export default function HomePage() {
           ) : (
             <>
               <span style={s.hintText}>상황을 고르면 같은 업계의 익명의 동료와 매칭돼요</span>
-              <span style={s.hintText}>돋보기 클릭 또는 Enter로 매칭</span>
+              <span style={s.hintText}>매칭하기 버튼 또는 Enter로 매칭</span>
             </>
           )}
         </div>
