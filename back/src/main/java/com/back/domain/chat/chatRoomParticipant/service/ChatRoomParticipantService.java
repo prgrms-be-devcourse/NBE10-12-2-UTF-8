@@ -62,4 +62,9 @@ public class ChatRoomParticipantService {
         }
         return chatRoomParticipantRepository.findByChatRoomIdIn(roomIds);
     }
+
+    @Transactional
+    public void deleteAllByMember(Member member) {
+        chatRoomParticipantRepository.deleteByMember(member);
+    }
 }

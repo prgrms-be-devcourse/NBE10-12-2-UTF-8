@@ -118,4 +118,8 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
            WHERE r.id = :id
            """)
     Optional<MatchRequest> findByIdWithMember(@Param("id") UUID id);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM MatchRequest r WHERE r.member = :member")
+    void deleteByMember(@Param("member") Member member);
 }

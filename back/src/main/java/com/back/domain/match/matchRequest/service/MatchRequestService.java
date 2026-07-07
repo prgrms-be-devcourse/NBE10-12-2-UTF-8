@@ -233,4 +233,13 @@ public class MatchRequestService {
     public List<SituationStatisticsDto> getSituationStatistics() {
         return matchRequestRepository.countActiveBySituation(MatchStatus.MATCHED, ChatRoomStatus.ACTIVE);
     }
+
+    public boolean hasPendingRequest(Member member) {
+        return matchRequestRepository.existsByMemberAndStatus(member, MatchStatus.PENDING);
+    }
+
+    @Transactional
+    public void deleteAllByMember(Member member) {
+        matchRequestRepository.deleteByMember(member);
+    }
 }
