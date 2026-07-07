@@ -1,6 +1,7 @@
 package com.back.domain.chat.chatRoomMessage.repository;
 
 import com.back.domain.chat.chatRoomMessage.entity.ChatMessage;
+import com.back.domain.member.member.entity.Member;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -71,4 +72,13 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
             @Param("roomId") UUID roomId,
             @Param("after") LocalDateTime after
     );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+       DELETE FROM ChatMessage m 
+       WHERE m.participant IN (
+           SELECT p FROM ChatRoomParticipant p WHERE p.member = :member
+       )
+       """)
+    void deleteByParticipantMember(@Param("member") Member member);
 }

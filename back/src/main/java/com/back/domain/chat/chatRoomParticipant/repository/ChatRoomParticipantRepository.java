@@ -2,7 +2,9 @@ package com.back.domain.chat.chatRoomParticipant.repository;
 
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.chat.chatRoomParticipant.entity.ChatRoomParticipant;
+import com.back.domain.member.member.entity.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -35,4 +37,8 @@ public interface ChatRoomParticipantRepository extends JpaRepository<ChatRoomPar
        """)
     List<ChatRoomParticipant> findByChatRoomIdIn(@Param("chatRoomIds") Collection<UUID> chatRoomIds);
     Optional<ChatRoomParticipant> findByMemberIdAndChatRoomStatus(UUID memberId, ChatRoomStatus status);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM ChatRoomParticipant p WHERE p.member = :member")
+    void deleteByMember(@Param("member") Member member);
 }
