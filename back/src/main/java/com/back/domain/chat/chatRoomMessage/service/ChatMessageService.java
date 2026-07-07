@@ -81,11 +81,9 @@ public class ChatMessageService {
                     .ifPresent(bot -> eventPublisher.publishEvent(new BotReplyTriggerEvent(roomId, bot.getId())));
         }
 
-        // Redis 캐시 추가 (캐시가 이미 존재할 때만 부분 캐싱을 덧붙임으로써 데이터 유실 방지)
+        // Redis 캐시 무효화 (이중 쓰기를 방지하고 다음 조회 시 최신화된 캐시가 적재되도록 즉시 삭제)
         String key = "chat:room:" + roomId + ":messages";
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
-            redisTemplate.opsForList().rightPush(key, new RedisChatMessageDto(message));
-        }
+        redisTemplate.delete(key);
 
         return new ChatRoomMessageResponseDto(message, sender.getId());
     }

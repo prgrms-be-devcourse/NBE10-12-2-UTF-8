@@ -10,12 +10,3 @@ spring:
       port: 6379
 custom:
   frontendBaseUrl: http://localhost:3000
-  scheduler:
-    match:
-      retry-delay: "31536000000"
-      cancel-delay: "31536000000"
-      initial-delay: "31536000000"
-    chat-close:
-      cron: "0 0 4 31 12 ?"
-    chat-clean:
-      cron: "0 0 4 31 12 ?"

@@ -11,12 +11,12 @@ public class MatchScheduler {
 
     private final MatchRequestService matchRequestService;
 
-    @Scheduled(fixedDelayString = "${custom.scheduler.match.retry-delay:10000}", initialDelayString = "${custom.scheduler.match.initial-delay:0}")
+    @Scheduled(fixedDelay = 10000)
     public void retryPendingMatches() {
         matchRequestService.retryPendingMatches();
     }
 
-    @Scheduled(fixedDelayString = "${custom.scheduler.match.cancel-delay:60000}", initialDelayString = "${custom.scheduler.match.initial-delay:0}")
+    @Scheduled(fixedDelay = 60000)
     public void cancelExpiredMatchRequests() {
         matchRequestService.cancelExpiredRequests();
     }

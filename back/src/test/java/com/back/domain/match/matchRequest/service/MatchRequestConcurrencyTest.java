@@ -10,13 +10,14 @@ import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.repository.MemberRepository;
 import com.back.domain.member.member.service.MemberService;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -52,6 +53,14 @@ class MatchRequestConcurrencyTest {
 
     private final List<Member> createdMembers = new ArrayList<>();
 
+    @BeforeEach
+    void setUp() {
+        // 테스트 전 Redis 대기열 클린업
+        for (Industry ind : Industry.values()) {
+            redisTemplate.delete("match:queue:" + ind.name());
+        }
+    }
+
     @AfterEach
     void cleanUp() {
         matchRequestRepository.deleteAll();
@@ -60,7 +69,7 @@ class MatchRequestConcurrencyTest {
         createdMembers.forEach(memberRepository::delete);
         createdMembers.clear();
         
-        // Redis 대기열 클린업
+        // 테스트 후 Redis 대기열 클린업
         for (Industry ind : Industry.values()) {
             redisTemplate.delete("match:queue:" + ind.name());
         }
@@ -73,7 +82,7 @@ class MatchRequestConcurrencyTest {
         MatchRequest matchRequest = matchRequestRepository.save(new MatchRequest(member, situation));
         ReflectionTestUtils.setField(matchRequest, "requestedAt", LocalDateTime.now().minusSeconds(secondsAgo));
         
-        // Redis 대기열에도 테스트 픽스처 적재
+        // Redis ZSET 대기열에도 테스트 픽스처 적재
         redisTemplate.opsForZSet().add("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString(), System.currentTimeMillis() - (secondsAgo * 1000));
         
         return matchRequestRepository.saveAndFlush(matchRequest);

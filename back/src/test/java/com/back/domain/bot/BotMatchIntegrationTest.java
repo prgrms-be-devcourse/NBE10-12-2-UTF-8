@@ -16,9 +16,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -47,6 +48,14 @@ class BotMatchIntegrationTest {
 
     private final List<Member> createdMembers = new ArrayList<>();
 
+    @BeforeEach
+    void setUp() {
+        // 테스트 전 Redis 대기열 클린업
+        for (Industry ind : Industry.values()) {
+            redisTemplate.delete("match:queue:" + ind.name());
+        }
+    }
+
     @AfterEach
     void cleanUp() {
         matchRequestRepository.deleteAll();
@@ -55,7 +64,7 @@ class BotMatchIntegrationTest {
         createdMembers.forEach(memberRepository::delete);
         createdMembers.clear();
         
-        // Redis 대기열 클린업
+        // 테스트 후 Redis 대기열 클린업
         for (Industry ind : Industry.values()) {
             redisTemplate.delete("match:queue:" + ind.name());
         }
@@ -65,7 +74,7 @@ class BotMatchIntegrationTest {
         MatchRequest matchRequest = matchRequestRepository.save(new MatchRequest(member, situation));
         ReflectionTestUtils.setField(matchRequest, "requestedAt", LocalDateTime.now().minusSeconds(secondsAgo));
         
-        // Redis 대기열에도 테스트 픽스처 적재
+        // Redis ZSET 대기열에도 테스트 픽스처 적재
         redisTemplate.opsForZSet().add("match:queue:" + matchRequest.getIndustry().name(), matchRequest.getId().toString(), System.currentTimeMillis() - (secondsAgo * 1000));
         
         return matchRequestRepository.saveAndFlush(matchRequest);
@@ -112,9 +121,13 @@ class BotMatchIntegrationTest {
 
         MatchRequest refreshedA = matchRequestRepository.findById(reqA.getId()).orElseThrow();
         MatchRequest refreshedB = matchRequestRepository.findById(reqB.getId()).orElseThrow();
-
         assertThat(refreshedA.getStatus()).isEqualTo(MatchStatus.MATCHED);
         assertThat(refreshedB.getStatus()).isEqualTo(MatchStatus.MATCHED);
         assertThat(refreshedA.getRoom().getId()).isEqualTo(refreshedB.getRoom().getId());
+
+        Member bot = memberRepository.findByEmail(BotAccounts.emailFor(Industry.IT)).orElseThrow();
+        boolean botHasMatchRequest = matchRequestRepository.findAll().stream()
+                .anyMatch(r -> r.getMember().getId().equals(bot.getId()));
+        assertThat(botHasMatchRequest).isFalse();
     }
 }

@@ -13,6 +13,11 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import com.back.domain.member.member.entity.Industry;
+import com.back.domain.bot.BotReplyService;
 
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -28,16 +33,17 @@ public class ApiV1DashboardControllerTest {
     private MemberService memberService;
     @Autowired
     private MockMvc mvc;
+    @MockitoBean
+    private BotReplyService botReplyService;
     @Autowired
-    private org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
+    private StringRedisTemplate redisTemplate;
 
-    @org.junit.jupiter.api.AfterEach
-    void cleanUp() {
-        // 대시보드 캐시 및 매칭 대기열 클린업
-        redisTemplate.delete("dashboard::getDashboard");
-        for (com.back.domain.member.member.entity.Industry ind : com.back.domain.member.member.entity.Industry.values()) {
+    @BeforeEach
+    void setUp() {
+        for (Industry ind : Industry.values()) {
             redisTemplate.delete("match:queue:" + ind.name());
         }
+        redisTemplate.delete("dashboard::getDashboard");
     }
 
     @Test
@@ -51,7 +57,7 @@ public class ApiV1DashboardControllerTest {
                                         {
                                              "email": "admin@test.com",
                                              "password": "1234"
-                                         }
+                                        }
                                         """)
                 )
                 .andReturn()
@@ -134,7 +140,7 @@ public class ApiV1DashboardControllerTest {
                                         {
                                              "email": "%s",
                                              "password": "1234"
-                                         }
+                                        }
                                         """.formatted(email))
                 )
                 .andReturn()
