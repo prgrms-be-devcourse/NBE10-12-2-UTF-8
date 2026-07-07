@@ -28,11 +28,11 @@ public interface ChatRoomParticipantRepository extends JpaRepository<ChatRoomPar
     // 여러 채팅방의 참여자를 한 번에 조회 - 매칭 이력(N개 방)에서 봇 여부 배치 판별 시
     // 방마다 개별 쿼리 나가는 N+1 방지용
     @Query("""
-           SELECT p FROM ChatRoomParticipant p
-           JOIN FETCH p.member
-           WHERE p.chatRoom.id IN :chatRoomIds
-           """)
+       SELECT p FROM ChatRoomParticipant p
+       JOIN FETCH p.member
+       JOIN FETCH p.chatRoom
+       WHERE p.chatRoom.id IN :chatRoomIds
+       """)
     List<ChatRoomParticipant> findByChatRoomIdIn(@Param("chatRoomIds") Collection<UUID> chatRoomIds);
-
     Optional<ChatRoomParticipant> findByMemberIdAndChatRoomStatus(UUID memberId, ChatRoomStatus status);
 }

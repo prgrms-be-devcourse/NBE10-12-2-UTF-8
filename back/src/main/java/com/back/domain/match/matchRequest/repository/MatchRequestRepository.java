@@ -86,7 +86,15 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
             @Param("status") MatchStatus status,
             @Param("expiredBefore") LocalDateTime expiredBefore);
 
-    List<MatchRequest> findByMemberAndRoomStatus(Member member, ChatRoomStatus status);
+    @Query("""
+       SELECT r FROM MatchRequest r
+       JOIN FETCH r.room
+       WHERE r.member = :member AND r.room.status = :status
+       ORDER BY r.room.createdAt DESC
+       """)
+    List<MatchRequest> findByMemberAndRoomStatus(
+            @Param("member") Member member,
+            @Param("status") ChatRoomStatus status);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "UPDATE match_request SET status = 'MATCHED', version = version + 1, modified_at = CURRENT_TIMESTAMP " +
