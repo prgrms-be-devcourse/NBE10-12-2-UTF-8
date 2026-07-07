@@ -13,15 +13,17 @@ public record ChatRoomDto(
         ChatRoomStatus status,
         int maxParticipants,
         LocalDateTime createdAt,
-        LocalDateTime closedAt
+        LocalDateTime closedAt,
+        boolean isBot
 ) {
-    public ChatRoomDto(ChatRoom chatRoom) {
+    public ChatRoomDto(ChatRoom chatRoom, boolean isBot) {
         this(
                 chatRoom.getId(),
                 chatRoom.getStatus(),
                 chatRoom.getMaxParticipants(),
                 chatRoom.getCreatedAt(),
-                chatRoom.getClosedAt()
+                chatRoom.getClosedAt(),
+                isBot
         );
     }
 }
