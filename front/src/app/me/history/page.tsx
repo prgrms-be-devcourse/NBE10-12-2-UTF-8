@@ -27,6 +27,7 @@ const STATUS_STYLE: Record<string, { background: string; color: string }> = {
   ACTIVE: { background: '#e6f4ea', color: '#137333' },
   CLOSED: { background: '#f1f3f4', color: '#5f6368' },
 };
+const PARTNER_STYLE = { background: '#f3e8ff', color: '#7e3ff2' };
 
 export default function MatchHistoryPage() {
   const router = useRouter();
@@ -61,14 +62,21 @@ export default function MatchHistoryPage() {
           <div style={{ textAlign: 'center', padding: '60px 0', color: '#9aa0a6', fontSize: 14 }}>매칭 이력이 없어요</div>
         ) : (
           <div style={{ border: '1px solid #ebebeb', borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1.2fr 0.8fr', padding: '12px 20px', background: '#f8f9fa', fontSize: 12, color: '#9aa0a6', borderBottom: '1px solid #ebebeb' }}>
-              <span>일시</span><span>산업군</span><span>상황</span><span style={{ textAlign: 'right' }}>상태</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.9fr 1.1fr 0.7fr 0.8fr', padding: '12px 20px', background: '#f8f9fa', fontSize: 12, color: '#9aa0a6', borderBottom: '1px solid #ebebeb' }}>
+              <span>일시</span><span>산업군</span><span>상황</span><span>상대</span><span style={{ textAlign: 'right' }}>상태</span>
             </div>
             {[...history].reverse().map((item, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1.2fr 0.8fr', alignItems: 'center', padding: '13px 20px', fontSize: 13, color: '#3c4043', borderBottom: i < history.length - 1 ? '1px solid #f1f1f1' : 'none' }}>
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.9fr 1.1fr 0.7fr 0.8fr', alignItems: 'center', padding: '13px 20px', fontSize: 13, color: '#3c4043', borderBottom: i < history.length - 1 ? '1px solid #f1f1f1' : 'none' }}>
                 <span style={{ color: '#5f6368', fontSize: 12 }}>{fmtDate(item.matchedAt)}</span>
                 <span>{INDUSTRY_NAMES[item.industry] ?? item.industry}</span>
                 <span style={{ color: '#5f6368' }}>{item.situation}</span>
+                <span>
+                  {item.isBot && (
+                    <span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 9, fontSize: 11, fontWeight: 600, ...PARTNER_STYLE }}>
+                      🤖 AI
+                    </span>
+                  )}
+                </span>
                 <span style={{ textAlign: 'right' }}>
                   <span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 9, fontSize: 11, fontWeight: 600, ...(STATUS_STYLE[item.status] ?? { background: '#f1f3f4', color: '#5f6368' }) }}>
                     {STATUS_LABEL[item.status] ?? item.status}

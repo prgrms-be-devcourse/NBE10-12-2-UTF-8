@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -156,10 +155,7 @@ public class MemberService {
     }
 
     public List<MatchHistoryDto> getMatchHistory(Member member) {
-        return matchRequestService.findMatchHistoryByMember(member)
-                .stream()
-                .map(MatchHistoryDto::new)
-                .collect(Collectors.toList());
+        return matchRequestService.findMatchHistoryByMember(member);
     }
 
     @Transactional

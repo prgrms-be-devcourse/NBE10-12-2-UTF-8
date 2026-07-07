@@ -153,6 +153,7 @@ export type MatchHistoryDto = {
   industry: string;
   situation: string;
   status: 'ACTIVE' | 'CLOSED';
+  isBot: boolean;
 };
 
 export const apiGetMatchHistory = () =>
@@ -191,6 +192,7 @@ export type ChatRoom = {
   maxParticipants: number;
   createdAt: string;
   closedAt?: string;
+  isBot: boolean;
 };
 
 export const apiGetRoom = (roomId: string) =>

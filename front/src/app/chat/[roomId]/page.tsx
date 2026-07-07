@@ -68,6 +68,7 @@ export default function ChatPage() {
   const [partnerLeft, setPartnerLeft]   = useState(false);
   const [chatExpired, setChatExpired]   = useState(false);
   const [totalActiveUsers, setTotalActiveUsers] = useState(0);
+  const [isBot, setIsBot]               = useState(false);
 
   const [reportTarget, setReportTarget]           = useState<ChatMsg | null>(null);
   const [reportReason, setReportReason]           = useState('');
@@ -159,6 +160,7 @@ export default function ChatPage() {
 
     apiGetRoom(roomId)
       .then(room => {
+        setIsBot(room.isBot);
         if (room.status === 'CLOSED') { endChat(); return; }
         const endTime = new Date(room.createdAt).getTime() + 10 * 60 * 1000;
         const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
@@ -214,7 +216,7 @@ export default function ChatPage() {
   const fmtTimer = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-  const partnerNickname = messages.find(m => !m.isMine)?.senderNickname ?? '익명의 상대';
+  const partnerNickname = isBot ? 'AI' : (messages.find(m => !m.isMine)?.senderNickname ?? '익명의 상대');
   const displayMessages = [...messages].reverse();
 
   const s = {
@@ -266,6 +268,13 @@ export default function ChatPage() {
         </div>
 
         <div style={{ padding: '12px 18px 14px' }}>
+          {isBot && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f3e8ff', border: '1px solid #b083f2', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+              <span style={{ fontSize: 16 }}>🤖</span>
+              <span style={{ fontSize: 13, color: '#5b2fa6', fontWeight: 500 }}>지금 실시간 상대가 없어 AI와 매칭되었습니다</span>
+            </div>
+          )}
+
           {chatExpired && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#e8f0fe', border: '1px solid #3b7ff2', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -289,8 +298,13 @@ export default function ChatPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 11 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: chatClosed ? '#9aa0a6' : '#34a06b', display: 'inline-block' }} />
-              <span style={{ fontSize: 12, color: '#5f6368' }}>
+              <span style={{ fontSize: 12, color: '#5f6368', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <b style={{ color: '#3c4043', fontWeight: 600 }}>{partnerNickname}</b>
+                {isBot && (
+                  <span style={{ display: 'inline-block', padding: '2px 7px', borderRadius: 8, fontSize: 10, fontWeight: 600, background: '#f3e8ff', color: '#7e3ff2' }}>
+                    🤖 AI
+                  </span>
+                )}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
