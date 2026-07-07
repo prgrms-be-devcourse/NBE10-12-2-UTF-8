@@ -27,7 +27,7 @@ public class ChatRoomService {
                 .orElseThrow(() -> new ServiceException("404-1", "채팅방을 찾을 수 없습니다."));
     }
 
-    public boolean hasBotParticipant(UUID roomId){
+    public boolean hasBotParticipant(UUID roomId) {
         return chatRoomParticipantService.getParticipants(roomId).stream()
                 .map(ChatRoomParticipant::getMember)
                 .anyMatch(member -> BotAccounts.isBotEmail(member.getEmail()));

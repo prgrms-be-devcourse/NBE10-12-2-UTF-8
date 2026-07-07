@@ -16,10 +16,10 @@ public record MatchHistoryDto(
 ) {
     public MatchHistoryDto(MatchRequest matchRequest, boolean isBot) {
         this(
-        matchRequest.getRoom().getCreatedAt(),
-        matchRequest.getIndustry(),
-        matchRequest.getSituation(),
-        matchRequest.getRoom().getStatus(),
+                matchRequest.getRoom().getCreatedAt(),
+                matchRequest.getIndustry(),
+                matchRequest.getSituation(),
+                matchRequest.getRoom().getStatus(),
                 isBot
         );
     }

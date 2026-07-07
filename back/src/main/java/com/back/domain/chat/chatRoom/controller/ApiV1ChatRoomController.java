@@ -77,7 +77,7 @@ public class ApiV1ChatRoomController {
                 .map(chatRoom -> new RsData<>(
                         "200-1",
                         "현재 활성화된 채팅방 조회 성공",
-                        new ChatRoomDto(chatRoom,chatRoomService.hasBotParticipant(chatRoom.getId()))
+                        new ChatRoomDto(chatRoom, chatRoomService.hasBotParticipant(chatRoom.getId()))
                 ))
                 .orElseGet(() -> new RsData<>(
                         "200-2",
