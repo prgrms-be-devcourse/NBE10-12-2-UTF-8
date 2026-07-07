@@ -48,4 +48,9 @@ public class ChatRoomParticipantService {
     public boolean isParticipant(UUID roomId, UUID memberId) {
         return chatRoomParticipantRepository.existsByChatRoomIdAndMemberId(roomId, memberId);
     }
+
+    // 이 방의 전체 참여자 목록 조회 (member까지 fetch join 되어있어 N+1 없음)
+    public List<ChatRoomParticipant> getParticipants(UUID roomId) {
+        return chatRoomParticipantRepository.findByChatRoomId(roomId);
+    }
 }

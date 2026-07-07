@@ -38,11 +38,12 @@ public class ApiV1ChatRoomController {
         }
 
         chatRoomParticipantService.validateAccess(roomId, actor);
+        boolean isBot = chatRoomService.hasBotParticipant(roomId);
 
         return new RsData<>(
                 "200-1",
                 "채팅방 정보 조회 성공",
-                new ChatRoomDto(chatRoom)
+                new ChatRoomDto(chatRoom, isBot)
         );
     }
 
@@ -55,10 +56,12 @@ public class ApiV1ChatRoomController {
         }
 
         ChatRoom chatRoom = chatRoomService.closeChatRoom(roomId, actor);
+        boolean isBot = chatRoomService.hasBotParticipant(roomId);
+
         return new RsData<>(
                 "200-1",
                 "채팅방 상태 수정 성공 (채팅방 종료)",
-                new ChatRoomDto(chatRoom)
+                new ChatRoomDto(chatRoom, isBot)
         );
     }
 
@@ -74,7 +77,7 @@ public class ApiV1ChatRoomController {
                 .map(chatRoom -> new RsData<>(
                         "200-1",
                         "현재 활성화된 채팅방 조회 성공",
-                        new ChatRoomDto(chatRoom)
+                        new ChatRoomDto(chatRoom,chatRoomService.hasBotParticipant(chatRoom.getId()))
                 ))
                 .orElseGet(() -> new RsData<>(
                         "200-2",
