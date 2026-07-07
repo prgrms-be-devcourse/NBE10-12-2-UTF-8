@@ -68,7 +68,6 @@ function LockIcon() {
 export default function HomePage() {
   const router = useRouter();
   const [preClick, setPreClick]           = useState(true);
-  const [situation, setSituation]         = useState('');
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [userIndustry, setUserIndustry]   = useState('');
   const [matchError, setMatchError]       = useState('');
@@ -188,17 +187,12 @@ export default function HomePage() {
               지금 겪고 있는 상황으로 익명 매칭하기
             </span>
           ) : (
-            <input
-              autoFocus
-              type="text"
-              value={situation}
-              onChange={e => { setSituation(e.target.value); setSelectedTopic(null); }}
-              placeholder="관심사를 입력하거나 상황을 골라 매칭하세요"
-              style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: '#3c4043', background: 'transparent' }}
-            />
+            <span style={{ flex: 1, fontSize: 16, color: selectedTopic ? '#3c4043' : '#9aa0a6' }}>
+              {selectedTopic ?? '아래에서 상황을 골라주세요'}
+            </span>
           )}
-          {!preClick && situation && (
-            <button onClick={() => setSituation('')} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2 }}>
+          {!preClick && selectedTopic && (
+            <button onClick={() => setSelectedTopic(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2 }}>
               <XIcon />
             </button>
           )}
@@ -236,7 +230,7 @@ export default function HomePage() {
                   return (
                     <span
                       key={t.label}
-                      onClick={() => { setMatchError(''); setSelectedTopic(active ? null : t.label); setSituation(''); }}
+                      onClick={() => { setMatchError(''); setSelectedTopic(active ? null : t.label); }}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: active ? '#e8f0fe' : '#f8f9fa', border: `1px solid ${active ? '#3b7ff2' : '#e8eaed'}`, borderRadius: 16, fontSize: 13, color: active ? '#3b7ff2' : '#3c4043', fontWeight: active ? 600 : 400, cursor: 'pointer' }}
                     >
                       {t.label}
@@ -245,6 +239,14 @@ export default function HomePage() {
                   );
                 })}
               </div>
+              <button
+                onClick={startMatch}
+                disabled={!selectedTopic}
+                style={{ marginTop: 14, width: '100%', height: 44, background: selectedTopic ? '#3b7ff2' : '#f1f3f4', color: selectedTopic ? '#fff' : '#9aa0a6', border: 'none', borderRadius: 10, fontSize: 14.5, fontWeight: 600, cursor: selectedTopic ? 'pointer' : 'default' }}
+              >
+                {selectedTopic ? `"${selectedTopic}"로 매칭하기` : '상황을 선택해주세요'}
+              </button>
+
               {matchError === 'LOGIN_REQUIRED' ? (
                 <div style={{ marginTop: 10, fontSize: 12, color: '#5f6368' }}>
                   매칭하려면 로그인이 필요해요.{' '}
@@ -271,7 +273,7 @@ export default function HomePage() {
           ) : (
             <>
               <span style={s.hintText}>상황을 고르면 같은 업계의 익명의 동료와 매칭돼요</span>
-              <span style={s.hintText}>돋보기 클릭 또는 Enter로 매칭</span>
+              <span style={s.hintText}>매칭하기 버튼 또는 Enter로 매칭</span>
             </>
           )}
         </div>

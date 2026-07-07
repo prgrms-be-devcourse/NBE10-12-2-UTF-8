@@ -48,7 +48,7 @@ export default function SignupPage() {
     setLoading(true);
     try {
       await apiSignup(email, password, INDUSTRY_CODES[selected!] ?? selected!);
-      router.replace('/login');
+      router.replace('/login?signup=success');
     } catch (e: unknown) {
       setError((e as Error)?.message ?? '회원가입에 실패했어요');
     } finally {
