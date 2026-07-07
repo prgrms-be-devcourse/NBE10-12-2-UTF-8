@@ -116,4 +116,9 @@ public class ChatMessageService {
                 .map(message -> new ChatRoomMessageResponseDto(message, requester.getId()))
                 .toList();
     }
+
+    @Transactional
+    public void deleteAllByMember(Member member) {
+        chatMessageRepository.deleteByParticipantMember(member);
+    }
 }
