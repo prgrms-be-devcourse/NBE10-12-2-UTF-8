@@ -5,6 +5,7 @@ import com.back.domain.bot.BotReplyTriggerEvent;
 import com.back.domain.chat.chatRoom.entity.ChatRoom;
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.chat.chatRoom.service.ChatRoomService;
+import com.back.domain.match.matchRequest.dto.MatchHistoryDto;
 import com.back.domain.match.matchRequest.dto.SituationStatisticsDto;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
@@ -23,10 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -216,8 +214,19 @@ public class MatchRequestService {
         matchRequestRepository.deleteAll(expired);
     }
 
-    public List<MatchRequest> findMatchHistoryByMember(Member member) {
-        return matchRequestRepository.findByMemberAndRoomStatus(member, ChatRoomStatus.CLOSED);
+    public List<MatchHistoryDto> findMatchHistoryByMember(Member member) {
+        List<MatchRequest> requests = matchRequestRepository.findByMemberAndRoomStatus(member, ChatRoomStatus.CLOSED);
+
+        List<UUID> roomIds = requests.stream()
+                .map(r -> r.getRoom().getId())
+                .distinct()
+                .toList();
+
+        Map<UUID, Boolean> botMap = chatRoomService.hasBotParticipantMap(roomIds);
+
+        return requests.stream()
+                .map(r -> new MatchHistoryDto(r, botMap.getOrDefault(r.getRoom().getId(), false)))
+                .toList();
     }
 
     @Transactional(readOnly = true)

@@ -12,9 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -61,5 +59,21 @@ public class ChatRoomService {
 
     public Optional<ChatRoom> findActiveChatRoom(Member actor) {
         return chatRoomParticipantService.findActiveChatRoomByMember(actor);
+    }
+
+    // 여러 채팅방의 봇 참여 여부를 한 번에 조회 (roomId -> isBot)
+    public Map<UUID, Boolean> hasBotParticipantMap(Collection<UUID> roomIds) {
+        if (roomIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<UUID, Boolean> result = new HashMap<>();
+        roomIds.forEach(id -> result.put(id, false));
+
+        chatRoomParticipantService.getParticipantsByRoomIds(roomIds).stream()
+                .filter(p -> BotAccounts.isBotEmail(p.getMember().getEmail()))
+                .forEach(p -> result.put(p.getChatRoom().getId(), true));
+
+        return result;
     }
 }

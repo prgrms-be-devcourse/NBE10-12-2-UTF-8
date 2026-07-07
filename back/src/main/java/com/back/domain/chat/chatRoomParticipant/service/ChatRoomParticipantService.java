@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -52,5 +53,13 @@ public class ChatRoomParticipantService {
     // 이 방의 전체 참여자 목록 조회 (member까지 fetch join 되어있어 N+1 없음)
     public List<ChatRoomParticipant> getParticipants(UUID roomId) {
         return chatRoomParticipantRepository.findByChatRoomId(roomId);
+    }
+
+    // 여러 방의 참여자를 한 번에 조회 (매칭 이력처럼 N개 방을 다룰 때 N+1 방지용)
+    public List<ChatRoomParticipant> getParticipantsByRoomIds(Collection<UUID> roomIds) {
+        if (roomIds.isEmpty()) {
+            return List.of();
+        }
+        return chatRoomParticipantRepository.findByChatRoomIdIn(roomIds);
     }
 }

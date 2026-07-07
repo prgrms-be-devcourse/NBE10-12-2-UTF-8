@@ -11,14 +11,16 @@ public record MatchHistoryDto(
         LocalDateTime matchedAt,
         Industry industry,
         Situation situation,
-        ChatRoomStatus status
+        ChatRoomStatus status,
+        boolean isBot
 ) {
-    public MatchHistoryDto(MatchRequest matchRequest) {
+    public MatchHistoryDto(MatchRequest matchRequest, boolean isBot) {
         this(
         matchRequest.getRoom().getCreatedAt(),
         matchRequest.getIndustry(),
         matchRequest.getSituation(),
-        matchRequest.getRoom().getStatus()
+        matchRequest.getRoom().getStatus(),
+                isBot
         );
     }
 }
