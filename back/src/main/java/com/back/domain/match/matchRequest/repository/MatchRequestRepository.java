@@ -1,6 +1,7 @@
 package com.back.domain.match.matchRequest.repository;
 
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
+import com.back.domain.dashboard.dashboard.dto.IndustryStatisticsDto;
 import com.back.domain.match.matchRequest.dto.SituationStatisticsDto;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
@@ -21,6 +22,8 @@ import java.util.List;
 
 public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID> {
     boolean existsByMemberAndStatus(Member member, MatchStatus status);
+
+    long countByStatus(MatchStatus status);
 
     @Query("""
            SELECT r FROM MatchRequest r
@@ -122,4 +125,12 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM MatchRequest r WHERE r.member = :member")
     void deleteByMember(@Param("member") Member member);
+
+    @Query("""
+       SELECT new com.back.domain.dashboard.dashboard.dto.IndustryStatisticsDto(r.industry, COUNT(DISTINCT r.room.id))
+       FROM MatchRequest r
+       WHERE r.status = :status
+       GROUP BY r.industry
+       """)
+    List<IndustryStatisticsDto> countMatchedRoomsByIndustry(@Param("status") MatchStatus status);
 }

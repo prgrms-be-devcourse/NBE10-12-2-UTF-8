@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiGetMatch, apiCancelMatch, apiGetMe, getToken, INDUSTRY_NAMES } from '@/lib/api';
+import { apiGetMatch, apiCancelMatch, apiGetMe, apiGetHomeStats, getToken, INDUSTRY_NAMES } from '@/lib/api';
 import { AppShell } from '@/components/AppShell';
 import { TangbisilLogo } from '@/components/TangbisilLogo';
 
@@ -53,6 +53,7 @@ export default function MatchPage() {
   const [elapsed, setElapsed]           = useState(0);
   const [situation, setSituation]       = useState('');
   const [userIndustry, setUserIndustry] = useState('');
+  const [totalActiveUsers, setTotalActiveUsers] = useState(0);
   const matchIdRef      = useRef<string | null>(null);
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const matchPollRef    = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -118,6 +119,14 @@ export default function MatchPage() {
     return () => window.removeEventListener('keydown', handler);
   }, [cancelMatch]);
 
+  useEffect(() => {
+    apiGetHomeStats()
+      .then(stats => setTotalActiveUsers(stats.totalActiveUsers))
+      .catch((err) => {
+        console.error('Failed to fetch home stats:', err);
+      });
+  }, []);
+
   const s = {
     card: { width: '100%', maxWidth: 560, background: '#fff', borderRadius: 24, boxShadow: '0 1px 10px rgba(32,33,36,.18)', marginTop: 20, boxSizing: 'border-box' } as const,
     searchRow: { height: 46, display: 'flex', alignItems: 'center', gap: 13, padding: '0 16px' } as const,
@@ -162,7 +171,7 @@ export default function MatchPage() {
               {situation}
             </span>
           )}
-          <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#9aa0a6', flexShrink: 0 }}>지금 13,590명 활동 중</span>
+          <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#9aa0a6', flexShrink: 0 }}>지금 {totalActiveUsers.toLocaleString()}명 활동 중</span>
         </div>
 
         <div style={{ padding: '34px 18px 30px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>

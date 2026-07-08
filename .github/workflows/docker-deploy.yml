@@ -79,6 +79,8 @@ jobs:
         with:
           context: ./front
           push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://nbe10-12-2-utf-8-back-production.up.railway.app/
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/nbe10-12-2-utf-8-front:latest
 
       - name: Railway 프론트 재배포 트리거
