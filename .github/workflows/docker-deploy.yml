@@ -48,7 +48,7 @@ jobs:
 
       - name: Railway 백엔드 재배포 트리거
         run: |
-          curl -X POST \
+          response=$(curl -sS -w '\n%{http_code}' -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
@@ -58,7 +58,17 @@ jobs:
                 "environmentId": "7bb326a9-c879-4457-a33d-f0605d23ae75"
               }
             }' \
-            https://backboard.railway.app/graphql/v2
+            https://backboard.railway.app/graphql/v2)
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          echo "$body"
+
+          # GraphQL은 HTTP 200이어도 body에 errors가 담겨 실패할 수 있어 상태코드만으론 판별 불가
+          if [ "$http_code" -ge 400 ] || echo "$body" | jq -e '.errors' > /dev/null 2>&1; then
+            echo "::error::Railway 백엔드 재배포 트리거 실패 (HTTP $http_code): $body"
+            exit 1
+          fi
 
   build-and-push-front:
     needs: detect-changes
@@ -85,7 +95,7 @@ jobs:
 
       - name: Railway 프론트 재배포 트리거
         run: |
-          curl -X POST \
+          response=$(curl -sS -w '\n%{http_code}' -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
@@ -95,4 +105,14 @@ jobs:
                 "environmentId": "7bb326a9-c879-4457-a33d-f0605d23ae75"
               }
             }' \
-            https://backboard.railway.app/graphql/v2
+            https://backboard.railway.app/graphql/v2)
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          echo "$body"
+
+          # GraphQL은 HTTP 200이어도 body에 errors가 담겨 실패할 수 있어 상태코드만으론 판별 불가
+          if [ "$http_code" -ge 400 ] || echo "$body" | jq -e '.errors' > /dev/null 2>&1; then
+            echo "::error::Railway 프론트 재배포 트리거 실패 (HTTP $http_code): $body"
+            exit 1
+          fi
