@@ -77,7 +77,7 @@ export default function AdminStatsPage() {
                 { label: '전체 가입자',  value: stats.totalMembers.toLocaleString('ko-KR'),  color: '#202124' },
                 { label: '오늘 매칭',   value: stats.todayMatches.toLocaleString('ko-KR'),   color: '#3b7ff2' },
                 { label: '활성 채팅방', value: stats.activeChatRooms.toLocaleString('ko-KR'), color: '#34a06b' },
-                { label: '대기 중 매칭', value: stats.pendingMatches.toLocaleString('ko-KR'), color: '#f5b400' },
+                { label: '대기 중 매칭', value: (stats.pendingMatches ?? 0).toLocaleString('ko-KR'), color: '#f5b400' },
               ].map(c => (
                 <div key={c.label} style={{ background: '#fff', border: '1px solid #ebebeb', borderRadius: 12, padding: '16px 18px' }}>
                   <div style={{ fontSize: 12, color: '#5f6368' }}>{c.label}</div>
