@@ -5,6 +5,7 @@ import com.back.domain.bot.BotReplyTriggerEvent;
 import com.back.domain.chat.chatRoom.entity.ChatRoom;
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
 import com.back.domain.chat.chatRoom.service.ChatRoomService;
+import com.back.domain.match.matchRequest.event.MatchRequestCreatedEvent;
 import com.back.domain.match.matchRequest.dto.MatchHistoryDto;
 import com.back.domain.match.matchRequest.dto.SituationStatisticsDto;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
@@ -177,10 +178,8 @@ public class MatchRequestService {
         }
         MatchRequest matchRequest = matchRequestRepository.save(new MatchRequest(member, situation));
         
-        // 매칭 신청 시 해당 산업군의 대기열 캐시를 무효화(삭제)하여 정합성 보장
-        redisTemplate.delete("match:queue:" + matchRequest.getIndustry().name());
-        
-        tryMatch(matchRequest);
+        // 커밋 완료 후 비동기 매칭 수색을 수행하기 위해 이벤트를 발행한다
+        eventPublisher.publishEvent(new MatchRequestCreatedEvent(matchRequest.getId()));
         return matchRequest;
     }
 

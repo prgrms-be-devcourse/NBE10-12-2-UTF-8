@@ -149,11 +149,7 @@ public class ChatMessageService {
         if (!messages.isEmpty()) {
             List<RedisChatMessageDto> dtoList = messages.stream().map(RedisChatMessageDto::new).toList();
             redisTemplate.opsForList().rightPushAll(key, dtoList.toArray());
-            
-            // 만약 이미 종료된 방이라면 24시간 만료 시간 설정
-            if (chatRoom.getStatus() == ChatRoomStatus.CLOSED) {
-                redisTemplate.expire(key, 24, TimeUnit.HOURS);
-            }
+            redisTemplate.expire(key, 24, TimeUnit.HOURS);
         }
 
         if (after != null) {
