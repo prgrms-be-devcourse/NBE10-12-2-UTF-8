@@ -25,7 +25,11 @@ public class MatchRequestEventHandler {
         log.info("Triggering async tryMatch for match request: {}", event.getMatchRequestId());
         try {
             MatchRequest matchRequest = matchRequestService.findById(event.getMatchRequestId());
-            redisTemplate.delete("match:queue:" + matchRequest.getIndustry().name());
+
+            String key = "match:queue:" + matchRequest.getIndustry().name();
+            long score = java.sql.Timestamp.valueOf(matchRequest.getRequestedAt()).getTime();
+            redisTemplate.opsForZSet().add(key, matchRequest.getId().toString(), score);
+
             matchRequestService.tryMatch(matchRequest.getId());
         } catch (Exception e) {
             log.error("Failed to execute async tryMatch for match request: {}", event.getMatchRequestId(), e);
