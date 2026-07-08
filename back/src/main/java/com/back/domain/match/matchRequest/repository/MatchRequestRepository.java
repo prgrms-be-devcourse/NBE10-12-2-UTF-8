@@ -22,6 +22,8 @@ import java.util.List;
 public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID> {
     boolean existsByMemberAndStatus(Member member, MatchStatus status);
 
+    long countByStatus(MatchStatus status);
+
     @Query("""
            SELECT r FROM MatchRequest r
            JOIN FETCH r.member

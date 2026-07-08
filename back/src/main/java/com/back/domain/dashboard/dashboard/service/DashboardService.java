@@ -41,6 +41,7 @@ public class DashboardService {
                 MatchStatus.MATCHED
         );
         long activeChatRooms = chatRoomRepository.countByStatus(ChatRoomStatus.ACTIVE);
+        long pendingMatches = matchRequestRepository.countByStatus(MatchStatus.PENDING);
 
         List<IndustryStatisticsDto> industryStatistics =
                 memberRepository.countByIndustry();
@@ -48,7 +49,7 @@ public class DashboardService {
         List<RecentMatchLogDto> recentMatchLogs = getRecentMatchLogs();
 
         return new DashboardResponseDto(
-                new MatchStatisticsDto(totalMembers, todayMatches, activeChatRooms),
+                new MatchStatisticsDto(totalMembers, todayMatches, activeChatRooms, pendingMatches),
                 industryStatistics,
                 recentMatchLogs
         );

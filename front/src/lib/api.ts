@@ -68,7 +68,46 @@ export const INDUSTRY_NAMES: Record<string, string> = Object.fromEntries(
 );
 
 /* ── Base fetch ─────────────────────────────────────────────────── */
-async function req<T>(path: string, options?: RequestInit): Promise<T> {
+// 401 재시도 루프/인증 흐름 자체의 401(로그인 실패 등)에 재발급을 걸지 않기 위한 제외 목록
+const NO_REFRESH_RETRY_PATHS = [
+  "/api/v1/members/login",
+  "/api/v1/members/signup",
+  "/api/v1/members/oauth/exchange",
+  "/api/v1/members/refresh",
+];
+
+// 동시에 여러 요청이 401을 맞아도 재발급 호출은 한 번만 나가도록 공유하는 in-flight promise
+let refreshPromise: Promise<string | null> | null = null;
+
+function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${BASE}/api/v1/members/refresh`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        const text = await res.text();
+        const body = text ? safeJsonParse(text) : null;
+        const token = body?.data?.accessToken as string | undefined;
+        if (!token) return null;
+        localStorage.setItem("accessToken", token);
+        return token;
+      })
+      .catch(() => null)
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
+async function req<T>(
+  path: string,
+  options?: RequestInit,
+  _isRetry = false,
+): Promise<T> {
   const token = getToken();
   const res = await fetch(`${BASE}${path}`, {
     ...options,
@@ -79,6 +118,25 @@ async function req<T>(path: string, options?: RequestInit): Promise<T> {
       ...(options?.headers ?? {}),
     },
   });
+
+  // accessToken 만료로 401을 받으면, 로그인 흐름 자체의 요청이 아닌 한
+  // refreshToken으로 한 번만 자동 재발급받아 원요청을 재시도한다.
+  if (
+    res.status === 401 &&
+    !_isRetry &&
+    token &&
+    !NO_REFRESH_RETRY_PATHS.includes(path)
+  ) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      return req<T>(path, options, true);
+    }
+    clearTokens();
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+  }
+
   if (res.status === 204) return null as T;
   const text = await res.text();
   const body = text ? safeJsonParse(text) : null;
@@ -262,6 +320,7 @@ export const apiGetDashboard = () =>
       totalMembers: number;
       todayMatches: number;
       activeChatRooms: number;
+      pendingMatches: number;
     };
     industryStatistics: Array<{ industry: string; count: number }>;
     recentMatchLogs: Array<{ matchedAt: string; industry: string; situation: string }>;
