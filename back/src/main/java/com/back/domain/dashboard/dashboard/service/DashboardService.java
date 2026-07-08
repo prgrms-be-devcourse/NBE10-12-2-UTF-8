@@ -8,6 +8,7 @@ import com.back.domain.dashboard.dashboard.dto.MatchStatisticsDto;
 import com.back.domain.dashboard.dashboard.dto.RecentMatchLogDto;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
 import com.back.domain.match.matchRequest.repository.MatchRequestRepository;
+import com.back.domain.member.member.entity.Industry;
 import com.back.domain.member.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -44,7 +45,10 @@ public class DashboardService {
         long pendingMatches = matchRequestRepository.countByStatus(MatchStatus.PENDING);
 
         List<IndustryStatisticsDto> industryStatistics =
-                memberRepository.countByIndustry();
+                matchRequestRepository.countMatchedRoomsByIndustry(MatchStatus.MATCHED)
+                        .stream()
+                        .map(row -> new IndustryStatisticsDto((Industry) row[0], (Long) row[1]))
+                        .toList();
 
         List<RecentMatchLogDto> recentMatchLogs = getRecentMatchLogs();
 

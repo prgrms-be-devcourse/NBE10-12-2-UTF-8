@@ -124,4 +124,7 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM MatchRequest r WHERE r.member = :member")
     void deleteByMember(@Param("member") Member member);
+
+    @Query("SELECT r.industry, COUNT(DISTINCT r.room.id) FROM MatchRequest r WHERE r.status = :status GROUP BY r.industry")
+    List<Object[]> countMatchedRoomsByIndustry(@Param("status") MatchStatus status);
 }
