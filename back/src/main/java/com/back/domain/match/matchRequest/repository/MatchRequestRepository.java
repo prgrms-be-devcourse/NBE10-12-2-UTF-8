@@ -1,6 +1,7 @@
 package com.back.domain.match.matchRequest.repository;
 
 import com.back.domain.chat.chatRoom.entity.ChatRoomStatus;
+import com.back.domain.dashboard.dashboard.dto.IndustryStatisticsDto;
 import com.back.domain.match.matchRequest.dto.SituationStatisticsDto;
 import com.back.domain.match.matchRequest.entity.MatchRequest;
 import com.back.domain.match.matchRequest.entity.MatchStatus;
@@ -125,6 +126,11 @@ public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID
     @Query("DELETE FROM MatchRequest r WHERE r.member = :member")
     void deleteByMember(@Param("member") Member member);
 
-    @Query("SELECT r.industry, COUNT(DISTINCT r.room.id) FROM MatchRequest r WHERE r.status = :status GROUP BY r.industry")
-    List<Object[]> countMatchedRoomsByIndustry(@Param("status") MatchStatus status);
+    @Query("""
+       SELECT new com.back.domain.dashboard.dashboard.dto.IndustryStatisticsDto(r.industry, COUNT(DISTINCT r.room.id))
+       FROM MatchRequest r
+       WHERE r.status = :status
+       GROUP BY r.industry
+       """)
+    List<IndustryStatisticsDto> countMatchedRoomsByIndustry(@Param("status") MatchStatus status);
 }

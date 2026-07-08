@@ -45,10 +45,7 @@ public class DashboardService {
         long pendingMatches = matchRequestRepository.countByStatus(MatchStatus.PENDING);
 
         List<IndustryStatisticsDto> industryStatistics =
-                matchRequestRepository.countMatchedRoomsByIndustry(MatchStatus.MATCHED)
-                        .stream()
-                        .map(row -> new IndustryStatisticsDto((Industry) row[0], (Long) row[1]))
-                        .toList();
+                matchRequestRepository.countMatchedRoomsByIndustry(MatchStatus.MATCHED);
 
         List<RecentMatchLogDto> recentMatchLogs = getRecentMatchLogs();
 
